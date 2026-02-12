@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Source_Serif_4 } from "next/font/google";
+import {
+  ClerkProvider,
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+} from "@clerk/nextjs";
 import "./globals.css";
 
 const displayFont = Space_Grotesk({
@@ -17,16 +25,34 @@ export const metadata: Metadata = {
   description: "Beehive social feed and profiles",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${displayFont.variable} ${bodyFont.variable} antialiased`}>
-        {children}
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body className={`${displayFont.variable} ${bodyFont.variable} antialiased`}>
+          <header className="border-b border-border/80 bg-card/60 backdrop-blur">
+            <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+              <p className="text-sm font-semibold tracking-[0.08em] uppercase">Beehive</p>
+              <div className="flex items-center gap-3">
+                <SignedOut>
+                  <SignInButton />
+                  <SignUpButton />
+                </SignedOut>
+                <SignedIn>
+                  <UserButton />
+                </SignedIn>
+              </div>
+            </div>
+          </header>
+          {children}
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

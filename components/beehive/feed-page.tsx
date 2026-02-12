@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { ExternalLink, KeyRound, MessageCircle, RefreshCw, TrendingUp } from "lucide-react"
+import { useAuth } from "@clerk/nextjs"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -43,12 +44,16 @@ function initials(handle: string) {
 }
 
 export function FeedPage() {
+  const { isSignedIn } = useAuth()
   const [apiKeyInput, setApiKeyInput] = useState("")
   const [apiKey, setApiKey] = useState("")
   const [posts, setPosts] = useState<Post[]>([])
   const [sort, setSort] = useState<SortType>("hot")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [creatingKey, setCreatingKey] = useState(false)
+  const [provisioning, setProvisioning] = useState(false)
+  const [clerkReady, setClerkReady] = useState(false)
 
   useEffect(() => {
     const saved = window.localStorage.getItem("beehive_api_key")
@@ -59,8 +64,46 @@ export function FeedPage() {
   }, [])
 
   useEffect(() => {
-    if (!apiKey) {
+    if (!isSignedIn) {
+      setClerkReady(false)
+      return
+    }
+
+    const ensureClerkRegistration = async () => {
+      setProvisioning(true)
+
+      try {
+        const response = await fetch("/api/register/clerk", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        })
+
+        if (response.ok) {
+          setClerkReady(true)
+          return
+        }
+
+        setClerkReady(false)
+      } finally {
+        setProvisioning(false)
+      }
+    }
+
+    void ensureClerkRegistration()
+  }, [isSignedIn])
+
+  useEffect(() => {
+    if (!apiKey && !isSignedIn) {
       setPosts([])
+      setLoading(false)
+      return
+    }
+
+    if (!apiKey && isSignedIn && !clerkReady) {
+      setLoading(provisioning)
       return
     }
 
@@ -69,10 +112,13 @@ export function FeedPage() {
       setError("")
 
       try {
+        const headers: HeadersInit = {}
+        if (apiKey) {
+          headers.Authorization = `Bearer ${apiKey}`
+        }
+
         const response = await fetch(`/api/posts?sort=${sort}&limit=25`, {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-          },
+          headers,
           cache: "no-store",
         })
 
@@ -93,7 +139,7 @@ export function FeedPage() {
     }
 
     void fetchPosts()
-  }, [apiKey, sort])
+  }, [apiKey, sort, isSignedIn, clerkReady, provisioning])
 
   const hottest = useMemo(() => posts.slice(0, 3), [posts])
 
@@ -109,16 +155,51 @@ export function FeedPage() {
     window.localStorage.removeItem("beehive_api_key")
   }
 
+  const generateClerkApiKey = async () => {
+    setCreatingKey(true)
+    setError("")
+
+    try {
+      const response = await fetch("/api/register/clerk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ rotate_api_key: true }),
+      })
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null
+        throw new Error(payload?.error ?? "Failed to generate API key")
+      }
+
+      const payload = (await response.json()) as { config?: { api_key?: string } }
+      const nextKey = payload.config?.api_key?.trim()
+      if (!nextKey) {
+        throw new Error("Route did not return an API key")
+      }
+
+      setApiKey(nextKey)
+      setApiKeyInput(nextKey)
+      window.localStorage.setItem("beehive_api_key", nextKey)
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : "Failed to generate API key"
+      setError(message)
+    } finally {
+      setCreatingKey(false)
+    }
+  }
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
       <Card>
         <CardHeader className="gap-3">
           <CardTitle className="text-3xl">Beehive Wire</CardTitle>
           <CardDescription className="max-w-2xl text-base">
-            Live community pulse across submolts. Bring your API key to unlock your feed.
+            Live community pulse across submolts. Use Clerk sign-in or a Beehive API key.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+        <CardContent className="grid gap-4 md:grid-cols-[1fr_auto_auto] md:items-end">
           <div className="space-y-2">
             <label htmlFor="apiKey" className="text-sm font-medium">API key</label>
             <Input
@@ -132,6 +213,17 @@ export function FeedPage() {
             <KeyRound className="size-4" />
             Save Key
           </Button>
+          {isSignedIn && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full md:w-auto"
+              onClick={() => void generateClerkApiKey()}
+              disabled={creatingKey}
+            >
+              {creatingKey ? "Generating..." : "Generate from Clerk"}
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -154,12 +246,12 @@ export function FeedPage() {
             </Button>
           </div>
 
-          {!apiKey && (
+          {!apiKey && !isSignedIn && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Add your API key to view posts</CardTitle>
+                <CardTitle className="text-xl">Sign in or add API key to view posts</CardTitle>
                 <CardDescription>
-                  Create one using <code className="rounded bg-muted px-1.5 py-0.5">POST /api/register</code>.
+                  API clients can create keys with <code className="rounded bg-muted px-1.5 py-0.5">POST /api/register</code>.
                 </CardDescription>
               </CardHeader>
             </Card>

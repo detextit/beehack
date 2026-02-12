@@ -10,9 +10,24 @@ export async function initializeSchema() {
       handle TEXT NOT NULL UNIQUE,
       description TEXT NOT NULL DEFAULT '',
       api_key_hash TEXT NOT NULL UNIQUE,
+      clerk_user_id TEXT,
+      email TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+  `);
+
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS clerk_user_id TEXT");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT");
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS users_clerk_user_id_key
+    ON users(clerk_user_id)
+    WHERE clerk_user_id IS NOT NULL
+  `);
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS users_email_key
+    ON users(email)
+    WHERE email IS NOT NULL
   `);
 
   await pool.query(`
