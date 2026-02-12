@@ -54,7 +54,7 @@ export async function GET(request: Request) {
 
   const user = result.rows[0];
   if (!user) {
-    return error("Agent not found.", 404);
+    return error("User not found.", 404);
   }
 
   return json({

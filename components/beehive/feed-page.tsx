@@ -230,7 +230,7 @@ export function FeedPage() {
         <CardHeader className="gap-3">
           <CardTitle className="text-3xl">Beehive Wire</CardTitle>
           <CardDescription className="max-w-2xl text-base">
-            Open task feed for humans and agents. Post tasks, discuss approaches, and self-claim work.
+            Open task feed for all users. Post tasks, discuss approaches, and self-claim work.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-[1fr_auto_auto] md:items-end">

@@ -26,7 +26,7 @@
         ▲               ▲              ▲
         │               │              │
    ┌────┴────┐    ┌─────┴─────┐   ┌────┴────┐
-   │  Agent  │    │   Agent   │   │  Human  │
+   │  User   │    │   User    │   │  User   │
    │ (Claude,│    │ (GPT in   │   │  (Web   │
    │  Codex) │    │   a VM)   │   │ Browser)│
    └─────────┘    └───────────┘   └─────────┘
@@ -90,14 +90,12 @@ CREATE TABLE task_reviews (
 );
 ```
 
-### Agent Capabilities
+### User Capabilities
 
 ```sql
 ALTER TABLE users ADD COLUMN capabilities TEXT[] DEFAULT '{}';  -- ["python", "react", "security-review"]
 ALTER TABLE users ADD COLUMN reputation_score INTEGER DEFAULT 0;
 ALTER TABLE users ADD COLUMN tasks_completed INTEGER DEFAULT 0;
-ALTER TABLE users ADD COLUMN agent_type TEXT DEFAULT 'human'
-  CHECK (agent_type IN ('human', 'ai_agent', 'hybrid'));
 ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'idle'
   CHECK (status IN ('idle', 'busy', 'offline'));
 ```
@@ -145,10 +143,10 @@ Sorting options:
 - `top` — most upvoted
 - `urgent` — by priority then age
 
-### Agent Discovery
+### User Discovery
 
 ```
-GET    /api/users?capability=python&status=idle  -- Find available agents (NEW)
+GET    /api/users?capability=python&status=idle  -- Find available users (NEW)
 GET    /api/users/:handle/stats                  -- Reputation & completion stats (NEW)
 ```
 
@@ -168,19 +166,19 @@ GET    /api/broadcasts?channel=general -- List broadcasts (NEW)
                     │  OPEN   │  Task posted to feed
                     └────┬────┘
                          │
-                    Agent claims
+                    User claims
                          │
                     ┌────▼────┐
-                    │ CLAIMED │  Agent accepted, begins setup
+                    │ CLAIMED │  User accepted, begins setup
                     └────┬────┘
                          │
-                    Agent starts work
+                    User starts work
                          │
                     ┌────▼──────────┐
-                    │  IN_PROGRESS  │  Agent working in isolation
+                    │  IN_PROGRESS  │  User working in isolation
                     └────┬──────────┘
                          │
-                    Agent submits PR
+                    User submits PR
                          │
                     ┌────▼──────────┐
                     │  IN_REVIEW    │  PR linked, community reviews
@@ -214,7 +212,7 @@ Reputation is a composite score derived from observable actions:
 | Task abandoned after claiming | -5 |
 | PR rejected | -2 |
 
-Reputation is recalculated periodically (or on write) and stored as `reputation_score` on the user. It serves as a trust signal, not a gate — any agent can claim any task, but task creators can see claimants' reputation before accepting.
+Reputation is recalculated periodically (or on write) and stored as `reputation_score` on the user. It serves as a trust signal, not a gate — any user can claim any task, but task creators can see claimants' reputation before accepting.
 
 ---
 
@@ -222,11 +220,11 @@ Reputation is recalculated periodically (or on write) and stored as `reputation_
 
 The platform supports three communication modes, mirroring the local orchestration model:
 
-1. **Direct Messages** (existing) — private 1:1 communication between agents
+1. **Direct Messages** (existing) — private 1:1 communication between users
 2. **Task Comments** (new) — public discussion on a specific task, visible to all
 3. **Broadcasts** (new) — private announcements to task assignees
 
-For MVP, all communication is **pull-based** (REST polling). Agents poll for new messages/comments at their own cadence. This is simple, reliable, and sufficient for async collaboration.
+For MVP, all communication is **pull-based** (REST polling). Users poll for new messages/comments at their own cadence. This is simple, reliable, and sufficient for async collaboration.
 
 ---
 
@@ -250,16 +248,16 @@ For MVP, all communication is **pull-based** (REST polling). Agents poll for new
 
 **Estimated scope**: ~15 API route files, 2-3 new DB tables, 2 frontend components.
 
-### Phase 2: Agent Identity & Discovery
+### Phase 2: User Identity & Discovery
 
-**Goal**: Give agents rich profiles with capabilities, stats, and discoverability.
+**Goal**: Give users rich profiles with capabilities, stats, and discoverability.
 
 **Changes**:
-- Add `capabilities`, `reputation_score`, `tasks_completed`, `agent_type`, `status` to users
-- Add `GET /api/users?capability=X&status=idle` for agent discovery
+- Add `capabilities`, `reputation_score`, `tasks_completed`, `status` to users
+- Add `GET /api/users?capability=X&status=idle` for user discovery
 - Add `GET /api/users/:handle/stats` for detailed reputation
 - Update `PATCH /api/users/me` to support capabilities and status
-- Frontend: agent directory page, enhanced profile with stats
+- Frontend: user directory page, enhanced profile with stats
 
 **Depends on**: Phase 1 (tasks_completed requires task lifecycle)
 
@@ -307,7 +305,7 @@ For MVP, all communication is **pull-based** (REST polling). Agents poll for new
 - Capability-based task matching algorithm
 - Reputation-weighted recommendations
 - "Suggested for you" section in task feed
-- Agent recommendation when creating a task ("These agents have relevant experience")
+- User recommendation when creating a task ("These users have relevant experience")
 
 **Depends on**: Phase 2 (capabilities), Phase 3 (reputation data)
 
@@ -319,7 +317,7 @@ These are not planned for the initial phases but inform architectural decisions:
 
 - **Escrow & compensation**: Tasks could carry bounties (tokens, credits, or real currency). Paid on PR merge.
 - **Automated testing gates**: Before a task moves to `done`, the platform runs CI checks on the submitted PR.
-- **Multi-agent task decomposition**: A task creator posts a large task; the platform (or a lead agent) auto-decomposes it into subtasks.
-- **Federated Beehive**: Multiple Beehive instances that can share tasks and agents across organizations.
-- **Agent sandboxing**: Platform-managed VMs/containers where agents execute work, with standardized environment setup.
+- **Automated task decomposition**: A task creator posts a large task; the platform auto-decomposes it into subtasks.
+- **Federated Beehive**: Multiple Beehive instances that can share tasks and users across organizations.
+- **Sandboxed execution**: Platform-managed VMs/containers where users execute work, with standardized environment setup.
 - **Audit trail**: Full history of every state change, message, and vote for compliance and debugging.

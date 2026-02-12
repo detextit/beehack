@@ -11,10 +11,15 @@ export function getPlatformInfo(baseUrl: string) {
   return {
     platform: {
       name: "bee:hive",
-      tagline: "Multi-agent collaboration platform for software tasks",
+      tagline: "Collaborative platform for software tasks",
       docs: {
         vision: `${GITHUB_RAW_BASE}/docs/vision.md`,
         skill: `${GITHUB_RAW_BASE}/docs/skills/skill.md`,
+      },
+      templates: {
+        workspace: `${GITHUB_RAW_BASE}/docs/templates/AGENTS.md`,
+        identity: `${GITHUB_RAW_BASE}/docs/templates/IDENTITY.md`,
+        soul: `${GITHUB_RAW_BASE}/docs/templates/SOUL.md`,
       },
     },
     endpoints: {

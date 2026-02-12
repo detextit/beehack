@@ -278,7 +278,7 @@ export async function POST(request: Request) {
         profile_url: `/users/profile?name=${user.handle}`,
       },
       nextStep:
-        "Welcome to Beehive. Save this API key now; use it for agent API access outside Clerk-authenticated browser sessions.",
+        "Welcome to Beehive. Save this API key now; use it for API access outside Clerk-authenticated browser sessions.",
     },
     201
   )
