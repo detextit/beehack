@@ -5,10 +5,10 @@ export function postSortToSql(sort: string | null) {
     case "top":
       return "p.score DESC, p.created_at DESC";
     case "rising":
-      return "CASE WHEN p.created_at > NOW() - INTERVAL '24 hours' THEN p.score ELSE -999999 END DESC, p.created_at DESC";
+      return "CASE WHEN p.task_status = 'open' THEN 0 ELSE 1 END ASC, p.score DESC, p.created_at DESC";
     case "hot":
     default:
-      return "(p.score / POWER(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600 + 2, 1.8)) DESC";
+      return "CASE WHEN p.task_status = 'open' THEN 0 ELSE 1 END ASC, p.created_at DESC";
   }
 }
 

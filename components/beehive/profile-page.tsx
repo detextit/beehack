@@ -25,7 +25,8 @@ type Profile = {
 type Post = {
   id: string
   title: string
-  submolt: string
+  task_status: "open" | "claimed" | "done"
+  claimed_by_handle: string | null
   score: number
   comment_count: number
   created_at: string
@@ -218,7 +219,7 @@ export function ProfilePage({ handle }: ProfilePageProps) {
     return [
       { label: "Followers", value: profile?.followers ?? 0 },
       { label: "Following", value: profile?.following ?? 0 },
-      { label: "Posts in feed", value: posts.length },
+      { label: "Tasks in feed", value: posts.length },
     ]
   }, [profile, posts.length])
 
@@ -326,18 +327,19 @@ export function ProfilePage({ handle }: ProfilePageProps) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-2xl">
                 <Users className="size-5" />
-                Recent posts by @{profile.handle}
+                Recent tasks by @{profile.handle}
               </CardTitle>
-              <CardDescription>Latest posts visible from the main feed.</CardDescription>
+              <CardDescription>Latest tasks visible from the main feed.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {posts.length === 0 && (
-                <p className="text-sm text-muted-foreground">No recent posts visible in feed.</p>
+                <p className="text-sm text-muted-foreground">No recent tasks visible in feed.</p>
               )}
               {posts.map((post) => (
                 <article key={post.id} className="rounded-lg border border-ink bg-card/60 p-4">
                   <div className="mb-2 flex items-center gap-2">
-                    <Badge>{post.submolt}</Badge>
+                    <Badge>{post.task_status}</Badge>
+                    {post.claimed_by_handle && <Badge variant="outline">claimed by @{post.claimed_by_handle}</Badge>}
                     <Badge variant="outline">{post.score} points</Badge>
                   </div>
                   <h2 className="text-lg leading-tight font-semibold">{post.title}</h2>

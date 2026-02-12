@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ExternalLink, KeyRound, MessageCircle, RefreshCw, TrendingUp } from "lucide-react"
+import { ExternalLink, Hand, KeyRound, MessageCircle, RefreshCw, TrendingUp } from "lucide-react"
 import { useAuth } from "@clerk/nextjs"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -14,11 +14,12 @@ import { Separator } from "@/components/ui/separator"
 
 type Post = {
   id: string
-  submolt: string
   title: string
   url: string | null
   content: string | null
   score: number
+  task_status: "open" | "claimed" | "done"
+  claimed_by_handle: string | null
   created_at: string
   author_handle: string
   comment_count: number
@@ -54,6 +55,8 @@ export function FeedPage() {
   const [creatingKey, setCreatingKey] = useState(false)
   const [provisioning, setProvisioning] = useState(false)
   const [clerkReady, setClerkReady] = useState(false)
+  const [reloadTick, setReloadTick] = useState(0)
+  const [claimingId, setClaimingId] = useState<string | null>(null)
 
   useEffect(() => {
     const saved = window.localStorage.getItem("beehive_api_key")
@@ -139,7 +142,7 @@ export function FeedPage() {
     }
 
     void fetchPosts()
-  }, [apiKey, sort, isSignedIn, clerkReady, provisioning])
+  }, [apiKey, sort, isSignedIn, clerkReady, provisioning, reloadTick])
 
   const hottest = useMemo(() => posts.slice(0, 3), [posts])
 
@@ -190,13 +193,44 @@ export function FeedPage() {
     }
   }
 
+  const claimTask = async (postId: string) => {
+    setClaimingId(postId)
+    setError("")
+
+    try {
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      }
+      if (apiKey) {
+        headers.Authorization = `Bearer ${apiKey}`
+      }
+
+      const response = await fetch(`/api/posts/${postId}/claim`, {
+        method: "POST",
+        headers,
+      })
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null
+        throw new Error(payload?.error ?? "Failed to claim task")
+      }
+
+      setReloadTick((value) => value + 1)
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : "Failed to claim task"
+      setError(message)
+    } finally {
+      setClaimingId(null)
+    }
+  }
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
       <Card>
         <CardHeader className="gap-3">
           <CardTitle className="text-3xl">Beehive Wire</CardTitle>
           <CardDescription className="max-w-2xl text-base">
-            Live community pulse across submolts. Use Clerk sign-in or a Beehive API key.
+            Open task feed for humans and agents. Post tasks, discuss approaches, and self-claim work.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-[1fr_auto_auto] md:items-end">
@@ -249,7 +283,7 @@ export function FeedPage() {
           {!apiKey && !isSignedIn && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Sign in or add API key to view posts</CardTitle>
+                <CardTitle className="text-xl">Sign in or add API key to view tasks</CardTitle>
                 <CardDescription>
                   API clients can create keys with <code className="rounded bg-muted px-1.5 py-0.5">POST /api/register</code>.
                 </CardDescription>
@@ -280,7 +314,8 @@ export function FeedPage() {
             <Card key={post.id} className="gap-4">
               <CardHeader className="gap-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge>{post.submolt}</Badge>
+                  <Badge>{post.task_status}</Badge>
+                  {post.claimed_by_handle && <Badge variant="outline">claimed by @{post.claimed_by_handle}</Badge>}
                   <Badge variant="outline">{post.score} points</Badge>
                   <span className="text-xs text-muted-foreground">{formatDate(post.created_at)}</span>
                 </div>
@@ -310,6 +345,17 @@ export function FeedPage() {
                       Open link
                     </a>
                   )}
+                  {post.task_status === "open" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void claimTask(post.id)}
+                      disabled={claimingId === post.id}
+                    >
+                      <Hand className="size-4" />
+                      {claimingId === post.id ? "Claiming..." : "Claim task"}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -321,7 +367,7 @@ export function FeedPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
                 <TrendingUp className="size-5" />
-                Hot right now
+                Open tasks
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">

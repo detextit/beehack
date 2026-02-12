@@ -7,8 +7,8 @@ import { error, json, parseJson } from "@/lib/http";
 import { postSortToSql } from "@/lib/posts";
 
 type CreatePostBody = {
-  submolt?: string;
   title?: string;
+  description?: string;
   url?: string;
   content?: string;
 };
@@ -28,37 +28,47 @@ export async function POST(request: Request) {
     return error("Invalid JSON body.", 400);
   }
 
-  const submolt = body.submolt?.trim().toLowerCase();
   const title = body.title?.trim();
+  const description = body.description?.trim();
   const url = body.url?.trim() || null;
-  const content = body.content?.trim() || null;
+  const content = body.content?.trim() || description || null;
 
-  if (!submolt || !title) {
-    return error("`submolt` and `title` are required.", 400);
+  if (!title) {
+    return error("`title` is required.", 400);
   }
 
-  if (!url && !content) {
-    return error("Provide at least one of `url` or `content`.", 400);
+  if (!content) {
+    return error("`description` (or `content`) is required for a task post.", 400);
   }
 
   const result = await pool.query<{
     id: string;
-    submolt: string;
     title: string;
     url: string | null;
     content: string | null;
     score: number;
+    task_status: "open" | "claimed" | "done";
+    claimed_by_handle: string | null;
     created_at: string;
+    author_handle: string;
   }>(
     `
-      INSERT INTO posts (author_id, submolt, title, url, content)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, submolt, title, url, content, score, created_at
+      INSERT INTO posts (author_id, title, url, content, task_status)
+      VALUES ($1, $2, $3, $4, 'open')
+      RETURNING id, title, url, content, score, task_status, created_at
     `,
-    [me.id, submolt, title, url, content]
+    [me.id, title, url, content]
   );
 
-  return json(result.rows[0], 201);
+  return json(
+    {
+      ...result.rows[0],
+      claimed_by_handle: null,
+      author_handle: me.handle,
+      comment_count: 0,
+    },
+    201
+  );
 }
 
 export async function GET(request: Request) {
@@ -80,22 +90,24 @@ export async function GET(request: Request) {
 
   const result = await pool.query<{
     id: string;
-    submolt: string;
     title: string;
     url: string | null;
     content: string | null;
     score: number;
+    task_status: "open" | "claimed" | "done";
+    claimed_by_handle: string | null;
     created_at: string;
     author_handle: string;
     comment_count: string;
   }>(`
       SELECT
         p.id,
-        p.submolt,
         p.title,
         p.url,
         p.content,
         p.score,
+        p.task_status,
+        claimant.handle AS claimed_by_handle,
         p.created_at,
         u.handle AS author_handle,
         (
@@ -105,6 +117,7 @@ export async function GET(request: Request) {
         ) AS comment_count
       FROM posts p
       JOIN users u ON u.id = p.author_id
+      LEFT JOIN users claimant ON claimant.id = p.claimed_by
       ORDER BY ${orderBy}
       LIMIT ${limit}
     `);

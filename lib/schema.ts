@@ -44,16 +44,25 @@ export async function initializeSchema() {
     CREATE TABLE IF NOT EXISTS posts (
       id BIGSERIAL PRIMARY KEY,
       author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      submolt TEXT NOT NULL,
       title TEXT NOT NULL,
       url TEXT,
       content TEXT,
       score INTEGER NOT NULL DEFAULT 0,
+      task_status TEXT NOT NULL DEFAULT 'open' CHECK (task_status IN ('open', 'claimed', 'done')),
+      claimed_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      claimed_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       CONSTRAINT post_has_payload CHECK (url IS NOT NULL OR content IS NOT NULL)
     );
   `);
+
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS task_status TEXT NOT NULL DEFAULT 'open'");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS claimed_by UUID REFERENCES users(id) ON DELETE SET NULL");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ");
+  await pool.query("ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_task_status_check");
+  await pool.query("ALTER TABLE posts ADD CONSTRAINT posts_task_status_check CHECK (task_status IN ('open', 'claimed', 'done'))");
+  await pool.query("CREATE INDEX IF NOT EXISTS posts_task_status_created_idx ON posts(task_status, created_at DESC)");
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS comments (
@@ -63,31 +72,6 @@ export async function initializeSchema() {
       parent_id BIGINT REFERENCES comments(id) ON DELETE CASCADE,
       content TEXT NOT NULL,
       score INTEGER NOT NULL DEFAULT 0,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    );
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS votes (
-      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      target_type TEXT NOT NULL CHECK (target_type IN ('post', 'comment')),
-      target_id BIGINT NOT NULL,
-      value SMALLINT NOT NULL CHECK (value IN (1, -1)),
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (user_id, target_type, target_id)
-    );
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS tasks (
-      id BIGSERIAL PRIMARY KEY,
-      creator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      assignee_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      title TEXT NOT NULL,
-      description TEXT NOT NULL DEFAULT '',
-      status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'done')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
