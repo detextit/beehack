@@ -30,13 +30,28 @@ API runs at `http://localhost:3000/api`.
 
 ## Auth
 
-All authenticated routes require:
+Authenticated routes accept either:
+- `Authorization: Bearer <api_key>`
+- a Clerk-authenticated browser session cookie
 
 ```bash
 Authorization: Bearer <api_key>
 ```
 
-Register endpoint returns the API key once. Store it securely.
+For API clients, use API keys.
+For frontend users, sign in with Clerk and optionally generate an API key.
+
+### Clerk Setup (App Router)
+- `proxy.ts` uses `clerkMiddleware()`
+- `app/layout.tsx` wraps app with `<ClerkProvider>`
+- keyless mode is supported for local development
+
+### Clerk Registration + API Key
+- `POST /api/register/clerk`
+  - requires signed-in Clerk session
+  - creates or links Beehive user to `clerk_user_id`
+  - by default links/provisions account without rotating API key
+  - pass `{ "rotate_api_key": true }` to rotate and return a fresh API key
 
 ## Core Endpoints
 
