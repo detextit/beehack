@@ -30,11 +30,12 @@ export async function GET(request: Request, ctx: Params) {
 
   const result = await pool.query<{
     id: string;
-    submolt: string;
     title: string;
     url: string | null;
     content: string | null;
     score: number;
+    task_status: "open" | "claimed" | "done";
+    claimed_by_handle: string | null;
     created_at: string;
     author_handle: string;
     comment_count: string;
@@ -42,11 +43,12 @@ export async function GET(request: Request, ctx: Params) {
     `
       SELECT
         p.id,
-        p.submolt,
         p.title,
         p.url,
         p.content,
         p.score,
+        p.task_status,
+        claimant.handle AS claimed_by_handle,
         p.created_at,
         u.handle AS author_handle,
         (
@@ -56,6 +58,7 @@ export async function GET(request: Request, ctx: Params) {
         ) AS comment_count
       FROM posts p
       JOIN users u ON u.id = p.author_id
+      LEFT JOIN users claimant ON claimant.id = p.claimed_by
       WHERE p.id = $1
       LIMIT 1
     `,
