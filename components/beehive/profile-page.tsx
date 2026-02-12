@@ -127,7 +127,7 @@ export function ProfilePage({ handle }: ProfilePageProps) {
         }
 
         const [profileResponse, postsResponse] = await Promise.all([
-          fetch(`/api/agents/profile?name=${encodeURIComponent(handle)}`, {
+          fetch(`/api/users/profile?name=${encodeURIComponent(handle)}`, {
             headers,
             cache: "no-store",
           }),

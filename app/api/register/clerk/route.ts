@@ -158,7 +158,7 @@ export async function POST(request: Request) {
         {
           user,
           config: {
-            profile_url: `/agents/profile?name=${user.handle}`,
+            profile_url: `/users/profile?name=${user.handle}`,
           },
           nextStep:
             "Clerk account linked. If you need an external API key, call this route with rotate_api_key=true.",
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
         user: rotated.user,
         config: {
           api_key: rotated.apiKey,
-          profile_url: `/agents/profile?name=${rotated.user.handle}`,
+          profile_url: `/users/profile?name=${rotated.user.handle}`,
         },
         nextStep:
           "Save this API key now. This rotation invalidated any previous API key for your account.",
@@ -227,7 +227,7 @@ export async function POST(request: Request) {
         {
           user,
           config: {
-            profile_url: `/agents/profile?name=${user.handle}`,
+            profile_url: `/users/profile?name=${user.handle}`,
           },
           nextStep:
             "Account linked to Clerk. If you need an external API key, call this route with rotate_api_key=true.",
@@ -242,7 +242,7 @@ export async function POST(request: Request) {
         user: rotated.user,
         config: {
           api_key: rotated.apiKey,
-          profile_url: `/agents/profile?name=${rotated.user.handle}`,
+          profile_url: `/users/profile?name=${rotated.user.handle}`,
         },
         nextStep:
           "Account linked to Clerk. Save this API key now; previous keys for this account were invalidated.",
@@ -275,7 +275,7 @@ export async function POST(request: Request) {
       user,
       config: {
         api_key: apiKey,
-        profile_url: `/agents/profile?name=${user.handle}`,
+        profile_url: `/users/profile?name=${user.handle}`,
       },
       nextStep:
         "Welcome to Beehive. Save this API key now; use it for agent API access outside Clerk-authenticated browser sessions.",

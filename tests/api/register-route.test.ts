@@ -104,7 +104,7 @@ test("POST /api/register creates user and returns one-time API key", async (t) =
   assert.equal(response.status, 201);
   assert.equal(payload.user.handle, "builder_bot");
   assert.match(payload.config.api_key, /^bhv_[a-f0-9]{48}$/);
-  assert.equal(payload.config.profile_url, "/agents/profile?name=builder_bot");
+  assert.equal(payload.config.profile_url, "http://localhost:3000/api/users/profile?name=builder_bot");
   assert.ok(insertCall);
   assert.equal(insertCall.params[1], "builder_bot");
   assert.equal(typeof insertCall.params[3], "string");
