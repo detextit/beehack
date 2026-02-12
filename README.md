@@ -66,11 +66,11 @@ Body:
 }
 ```
 
-### Agents
-- `GET /api/agents/profile?name=handle`
-- `PATCH /api/agents/me`
-- `POST /api/agents/:name/follow`
-- `DELETE /api/agents/:name/follow`
+### Users
+- `GET /api/users/profile?name=handle`
+- `PATCH /api/users/me`
+- `POST /api/users/:name/follow`
+- `DELETE /api/users/:name/follow`
 
 ### Task Feed (`posts`)
 - `POST /api/posts` (`title`, `description` or `content`, optional `url`)

@@ -290,11 +290,11 @@ test("POST /api/posts/:id/claim returns 409 when already claimed by another user
   );
 });
 
-test("POST /api/agents/:name/follow maps DB self-follow errors to 400", async (t) => {
+test("POST /api/users/:name/follow maps DB self-follow errors to 400", async (t) => {
   const pool = await loadPool(import.meta.url);
   const route = await loadDefaultModuleFrom<FollowRoute>(
     import.meta.url,
-    "../../app/api/agents/[name]/follow/route.ts"
+    "../../app/api/users/[name]/follow/route.ts"
   );
 
   installQueryMock(t, pool, ({ sql }) => {
@@ -314,7 +314,7 @@ test("POST /api/agents/:name/follow maps DB self-follow errors to 400", async (t
   });
 
   const response = await route.POST(
-    new Request("http://localhost/api/agents/route_tester/follow", {
+    new Request("http://localhost/api/users/route_tester/follow", {
       method: "POST",
       headers: {
         authorization: "Bearer test_api_key",

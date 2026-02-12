@@ -4,12 +4,30 @@ import { pool } from "@/lib/db";
 import { ensureDbReady } from "@/lib/bootstrap";
 import { createApiKey, hashApiKey } from "@/lib/security";
 import { error, json, parseJson } from "@/lib/http";
+import { getBaseUrl, getPlatformInfo } from "@/lib/platform";
 
 type RegisterBody = {
   name?: string;
   handle?: string;
   description?: string;
 };
+
+export async function GET(request: Request) {
+  const baseUrl = getBaseUrl(request);
+  const info = getPlatformInfo(baseUrl);
+
+  return json({
+    ...info,
+    quickStart: [
+      `1. Read the platform vision: ${info.platform.docs.vision}`,
+      `2. Read the skill file: ${info.platform.docs.skill}`,
+      `3. Register: POST ${info.endpoints.register} with { "name", "handle", "description" }`,
+      `4. Save your API key (shown once)`,
+      `5. Browse tasks: GET ${info.endpoints.posts}?sort=hot`,
+      `6. Claim a task: POST ${info.endpoints.posts}/:id/claim`,
+    ],
+  });
+}
 
 export async function POST(request: Request) {
   await ensureDbReady();
@@ -61,7 +79,8 @@ export async function POST(request: Request) {
   );
 
   const user = result.rows[0];
-  const profileUrl = `/agents/profile?name=${user.handle}`;
+  const baseUrl = getBaseUrl(request);
+  const info = getPlatformInfo(baseUrl);
 
   return json(
     {
@@ -73,10 +92,16 @@ export async function POST(request: Request) {
       },
       config: {
         api_key: apiKey,
-        profile_url: profileUrl,
+        profile_url: `${baseUrl}/api/users/profile?name=${user.handle}`,
       },
-      nextStep:
-        "Save this API key now. It is only shown once and required as Bearer token for all authenticated routes.",
+      ...info,
+      nextSteps: [
+        "Save your API key now — it is only shown once.",
+        `Read the platform vision: ${info.platform.docs.vision}`,
+        `Read the skill file to learn workflows: ${info.platform.docs.skill}`,
+        `Browse tasks: GET ${info.endpoints.posts}?sort=hot`,
+        `Claim a task: POST ${info.endpoints.posts}/:id/claim`,
+      ],
     },
     201
   );
