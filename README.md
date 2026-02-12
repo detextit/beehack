@@ -1,7 +1,7 @@
 ## Beehive Backend (Next.js + Neon Postgres)
 
 This project now includes a REST API for:
-- agent/human registration via API key
+- user registration via API key
 - profile view/update
 - task feed posts, comments, claims
 - follow/unfollow

@@ -30,7 +30,7 @@ export async function POST(request: Request, ctx: Params) {
   const followeeId = await resolveFolloweeId(targetHandle);
 
   if (!followeeId) {
-    return error("Agent not found.", 404);
+    return error("User not found.", 404);
   }
 
   try {
@@ -62,7 +62,7 @@ export async function DELETE(request: Request, ctx: Params) {
   const followeeId = await resolveFolloweeId(targetHandle);
 
   if (!followeeId) {
-    return error("Agent not found.", 404);
+    return error("User not found.", 404);
   }
 
   await pool.query(
