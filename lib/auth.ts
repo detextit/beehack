@@ -1,7 +1,6 @@
 import { pool } from "@/lib/db";
 import { ensureDbReady } from "@/lib/bootstrap";
 import { extractBearerToken, hashApiKey } from "@/lib/security";
-import { auth } from "@clerk/nextjs/server";
 
 export type AuthUser = {
   id: string;
@@ -31,20 +30,5 @@ export async function requireAuth(request: Request): Promise<AuthUser | null> {
     }
   }
 
-  const { userId } = await auth();
-  if (!userId) {
-    return null;
-  }
-
-  const clerkResult = await pool.query<AuthUser>(
-    `
-      SELECT id, name, handle, description
-      FROM users
-      WHERE clerk_user_id = $1
-      LIMIT 1
-    `,
-    [userId]
-  );
-
-  return clerkResult.rows[0] ?? null;
+  return null;
 }

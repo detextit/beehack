@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, CalendarClock, Link2, Users } from "lucide-react"
-import { useAuth } from "@clerk/nextjs"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -52,16 +51,12 @@ function initials(value: string) {
 }
 
 export function ProfilePage({ handle }: ProfilePageProps) {
-  const { isSignedIn } = useAuth()
   const [apiKeyInput, setApiKeyInput] = useState("")
   const [apiKey, setApiKey] = useState("")
   const [profile, setProfile] = useState<Profile | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const [creatingKey, setCreatingKey] = useState(false)
-  const [provisioning, setProvisioning] = useState(false)
-  const [clerkReady, setClerkReady] = useState(false)
 
   useEffect(() => {
     const saved = window.localStorage.getItem("beehive_api_key")
@@ -72,47 +67,10 @@ export function ProfilePage({ handle }: ProfilePageProps) {
   }, [])
 
   useEffect(() => {
-    if (!isSignedIn) {
-      setClerkReady(false)
-      return
-    }
-
-    const ensureClerkRegistration = async () => {
-      setProvisioning(true)
-
-      try {
-        const response = await fetch("/api/register/clerk", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        })
-
-        if (response.ok) {
-          setClerkReady(true)
-          return
-        }
-
-        setClerkReady(false)
-      } finally {
-        setProvisioning(false)
-      }
-    }
-
-    void ensureClerkRegistration()
-  }, [isSignedIn])
-
-  useEffect(() => {
-    if (!apiKey && !isSignedIn) {
+    if (!apiKey) {
       setProfile(null)
       setPosts([])
       setLoading(false)
-      return
-    }
-
-    if (!apiKey && isSignedIn && !clerkReady) {
-      setLoading(provisioning)
       return
     }
 
@@ -166,7 +124,7 @@ export function ProfilePage({ handle }: ProfilePageProps) {
     }
 
     void loadProfile()
-  }, [apiKey, handle, isSignedIn, clerkReady, provisioning])
+  }, [apiKey, handle])
 
   const saveKey = () => {
     const normalized = apiKeyInput.trim()
@@ -178,41 +136,6 @@ export function ProfilePage({ handle }: ProfilePageProps) {
     }
 
     window.localStorage.removeItem("beehive_api_key")
-  }
-
-  const generateClerkApiKey = async () => {
-    setCreatingKey(true)
-    setError("")
-
-    try {
-      const response = await fetch("/api/register/clerk", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ rotate_api_key: true }),
-      })
-
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { error?: string } | null
-        throw new Error(payload?.error ?? "Failed to generate API key")
-      }
-
-      const payload = (await response.json()) as { config?: { api_key?: string } }
-      const nextKey = payload.config?.api_key?.trim()
-      if (!nextKey) {
-        throw new Error("Route did not return an API key")
-      }
-
-      setApiKey(nextKey)
-      setApiKeyInput(nextKey)
-      window.localStorage.setItem("beehive_api_key", nextKey)
-    } catch (requestError) {
-      const message = requestError instanceof Error ? requestError.message : "Failed to generate API key"
-      setError(message)
-    } finally {
-      setCreatingKey(false)
-    }
   }
 
   const stats = useMemo(() => {
@@ -248,30 +171,14 @@ export function ProfilePage({ handle }: ProfilePageProps) {
         </div>
       </div>
 
-      {!apiKey && !isSignedIn && (
+      {!apiKey && (
         <Card>
           <CardHeader>
-            <CardTitle>Sign in or add API key</CardTitle>
+            <CardTitle>Add API key</CardTitle>
             <CardDescription>
               Profile routes are authenticated. API clients can get a key from <code className="rounded bg-muted px-1.5 py-0.5">POST /api/register</code>.
             </CardDescription>
           </CardHeader>
-        </Card>
-      )}
-
-      {isSignedIn && !apiKey && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Generate API key from Clerk</CardTitle>
-            <CardDescription>
-              Optional for browser usage, required if you want to call Beehive APIs from external tools.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => void generateClerkApiKey()} disabled={creatingKey}>
-              {creatingKey ? "Generating..." : "Generate API key"}
-            </Button>
-          </CardContent>
         </Card>
       )}
 
