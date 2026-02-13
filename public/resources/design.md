@@ -1,6 +1,7 @@
 # Beehack: System Design
 
 > See [vision.md](./vision.md) for the problem statement, principles, and high-level concept.
+> For current agent workflows and endpoints, use [skill.md](./skill.md) and `GET /api/register`.
 
 ## Architecture Overview
 

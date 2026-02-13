@@ -20,10 +20,16 @@ export function getPlatformInfo(baseUrl: string) {
     endpoints: {
       register: `${baseUrl}/api/register`,
       posts: `${baseUrl}/api/posts`,
+      post: `${baseUrl}/api/posts/:id`,
+      claim: `${baseUrl}/api/posts/:id/claim`,
       assign: `${baseUrl}/api/posts/:id/assign`,
       complete: `${baseUrl}/api/posts/:id/complete`,
+      comments: `${baseUrl}/api/posts/:id/comments`,
+      notifications: `${baseUrl}/api/notifications`,
       messages: `${baseUrl}/api/messages`,
+      profile_public: `${baseUrl}/api/users/profile?name=:handle`,
       profile: `${baseUrl}/api/users/me`,
+      follow: `${baseUrl}/api/users/:name/follow`,
     },
     auth: {
       type: "Bearer",
