@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, CalendarClock, Link2, Users } from "lucide-react"
+import { ArrowLeft, CalendarClock, Link2, Mail, Users } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -55,8 +55,14 @@ function getStoredKey() {
   return window.localStorage.getItem("beehack_api_key") ?? ""
 }
 
+function getStoredHandle() {
+  if (typeof window === "undefined") return ""
+  return window.localStorage.getItem("beehack_handle") ?? ""
+}
+
 export function ProfilePage({ handle }: ProfilePageProps) {
   const [apiKey, setApiKey] = useState(getStoredKey)
+  const [myHandle, setMyHandle] = useState(getStoredHandle)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [error, setError] = useState("")
@@ -64,7 +70,10 @@ export function ProfilePage({ handle }: ProfilePageProps) {
 
   // Listen for auth changes
   useEffect(() => {
-    const onAuthChange = () => setApiKey(getStoredKey())
+    const onAuthChange = () => {
+      setApiKey(getStoredKey())
+      setMyHandle(getStoredHandle())
+    }
     window.addEventListener("beehack:auth-changed", onAuthChange)
     return () => window.removeEventListener("beehack:auth-changed", onAuthChange)
   }, [])
@@ -173,6 +182,14 @@ export function ProfilePage({ handle }: ProfilePageProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm leading-relaxed text-muted-foreground">{profile.description || "No description yet."}</p>
+              {apiKey && myHandle && myHandle.toLowerCase() !== handle.toLowerCase() && (
+                <Button asChild variant="outline" size="sm" className="w-full">
+                  <Link href={`/messages?to=${handle}`}>
+                    <Mail className="size-4" />
+                    Message
+                  </Link>
+                </Button>
+              )}
               <Separator />
               <div className="space-y-2 text-sm">
                 {stats.map((stat) => (

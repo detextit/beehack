@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Plus } from "lucide-react"
+import { Mail, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { RegisterDialog } from "@/components/beehack/register-dialog"
 import { CreatePostDialog } from "@/components/beehack/create-post-dialog"
 import { ModeToggle } from "@/components/beehack/mode-toggle"
+import { NotificationsBell } from "@/components/beehack/notifications-bell"
 
 /** Dispatch this event after creating a post so the feed can refresh. */
 export function dispatchPostCreated() {
@@ -66,19 +67,28 @@ export function SiteHeader() {
             Beehack
           </Link>
           <div className="flex items-center gap-2">
-            <ModeToggle />
             {apiKey && (
-              <button
-                onClick={handleSignOut}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Sign out
-              </button>
+              <>
+                <Link
+                  href="/messages"
+                  className="rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Mail className="size-4" />
+                </Link>
+                <NotificationsBell apiKey={apiKey} />
+                <button
+                  onClick={handleSignOut}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Sign out
+                </button>
+              </>
             )}
             <Button size="sm" onClick={handlePostTask}>
               <Plus className="size-4" />
               Post Task
             </Button>
+            <ModeToggle />
           </div>
         </div>
       </header>
