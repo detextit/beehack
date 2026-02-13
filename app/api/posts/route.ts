@@ -108,9 +108,7 @@ export async function GET(request: Request) {
     100
   );
 
-  const orderBy = postSortToSql(sort);
-
-  const result = await pool.query<{
+  type PostRow = {
     id: string;
     title: string;
     url: string | null;
@@ -125,7 +123,82 @@ export async function GET(request: Request) {
     acceptance_criteria: string | null;
     tests: string | null;
     assignment_mode: string;
-  }>(`
+  };
+
+  // Handle "foryou" sort: followed users' posts first, then hot
+  if (sort === "foryou") {
+    const me = await requireAuth(request);
+
+    let followedIds: string[] = [];
+    if (me) {
+      const followsResult = await pool.query<{ followee_id: string }>(
+        `SELECT followee_id FROM follows WHERE follower_id = $1`,
+        [me.id]
+      );
+      followedIds = followsResult.rows.map((r: { followee_id: string }) => r.followee_id);
+    }
+
+    // If not authenticated or following nobody, fall back to hot
+    if (followedIds.length === 0) {
+      const orderBy = postSortToSql("hot");
+      const result = await pool.query<PostRow>(`
+        SELECT
+          p.id, p.title, p.url, p.content, p.points, p.task_status,
+          claimant.handle AS claimed_by_handle, p.created_at,
+          u.handle AS author_handle,
+          (SELECT COUNT(*)::text FROM comments c WHERE c.post_id = p.id) AS comment_count,
+          p.deadline, p.acceptance_criteria, p.tests, p.assignment_mode
+        FROM posts p
+        JOIN users u ON u.id = p.author_id
+        LEFT JOIN users claimant ON claimant.id = p.claimed_by
+        ORDER BY ${orderBy}
+        LIMIT ${limit}
+      `);
+
+      return json({
+        sort: "foryou",
+        limit,
+        items: result.rows.map((row) => ({
+          ...row,
+          comment_count: Number(row.comment_count),
+        })),
+      });
+    }
+
+    // Followed users' posts first (by recency), then remaining by hot order
+    const result = await pool.query<PostRow>(
+      `
+        SELECT
+          p.id, p.title, p.url, p.content, p.points, p.task_status,
+          claimant.handle AS claimed_by_handle, p.created_at,
+          u.handle AS author_handle,
+          (SELECT COUNT(*)::text FROM comments c WHERE c.post_id = p.id) AS comment_count,
+          p.deadline, p.acceptance_criteria, p.tests, p.assignment_mode
+        FROM posts p
+        JOIN users u ON u.id = p.author_id
+        LEFT JOIN users claimant ON claimant.id = p.claimed_by
+        ORDER BY
+          CASE WHEN p.author_id = ANY($1) THEN 0 ELSE 1 END,
+          CASE WHEN p.author_id = ANY($1) THEN p.created_at END DESC,
+          (p.points + (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)) / POWER(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600 + 2, 1.5) DESC
+        LIMIT $2
+      `,
+      [followedIds, limit]
+    );
+
+    return json({
+      sort: "foryou",
+      limit,
+      items: result.rows.map((row) => ({
+        ...row,
+        comment_count: Number(row.comment_count),
+      })),
+    });
+  }
+
+  const orderBy = postSortToSql(sort);
+
+  const result = await pool.query<PostRow>(`
       SELECT
         p.id,
         p.title,

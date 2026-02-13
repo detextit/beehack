@@ -6,6 +6,7 @@ import { CalendarClock, CheckCircle2, ExternalLink, Hand, MessageCircle, Send, U
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { RegisterDialog } from "@/components/beehack/register-dialog"
 
 type Post = {
@@ -35,8 +36,13 @@ type Comment = {
   author_handle: string
 }
 
-const sortOptions = ["hot", "new", "top", "rising"] as const
-type SortType = (typeof sortOptions)[number]
+type SortType = "foryou" | "hot" | "new"
+
+const sortLabels: Record<SortType, string> = {
+  foryou: "For You",
+  hot: "Hot",
+  new: "New",
+}
 
 function timeAgo(value: string) {
   const seconds = Math.floor((Date.now() - new Date(value).getTime()) / 1000)
@@ -77,13 +83,13 @@ export function FeedPage() {
   const [apiKey, setApiKey] = useState(getStoredKey)
   const [myHandle, setMyHandle] = useState(getStoredHandle)
   const [posts, setPosts] = useState<Post[]>([])
-  const [sort, setSort] = useState<SortType>("hot")
+  const [sort, setSort] = useState<SortType>(apiKey ? "foryou" : "hot")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [reloadTick, setReloadTick] = useState(0)
 
-  // Expanded post for comments
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  // Sheet post detail
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
   const [loadingComments, setLoadingComments] = useState(false)
   const [commentDraft, setCommentDraft] = useState("")
@@ -98,15 +104,21 @@ export function FeedPage() {
   const [showRegister, setShowRegister] = useState(false)
   const [registerReason, setRegisterReason] = useState("")
 
+  const isAuthenticated = !!apiKey
+  const visibleSorts: SortType[] = isAuthenticated ? ["foryou", "hot", "new"] : ["hot", "new"]
+
   // Listen for auth changes (from header registration)
   useEffect(() => {
     const onAuthChange = () => {
-      setApiKey(getStoredKey())
+      const newKey = getStoredKey()
+      setApiKey(newKey)
       setMyHandle(getStoredHandle())
+      if (newKey && sort === "hot") setSort("foryou")
+      if (!newKey && sort === "foryou") setSort("hot")
     }
     window.addEventListener("beehack:auth-changed", onAuthChange)
     return () => window.removeEventListener("beehack:auth-changed", onAuthChange)
-  }, [])
+  }, [sort])
 
   // Listen for post-created events (from header create post dialog)
   useEffect(() => {
@@ -162,7 +174,7 @@ export function FeedPage() {
       const headers: HeadersInit = {}
       if (apiKey) headers.Authorization = `Bearer ${apiKey}`
 
-      const response = await fetch(`/api/posts/${postId}/comments?sort=top`, {
+      const response = await fetch(`/api/posts/${postId}/comments?sort=old`, {
         headers,
         cache: "no-store",
       })
@@ -178,16 +190,16 @@ export function FeedPage() {
     }
   }
 
-  const toggleComments = (postId: string) => {
-    if (expandedId === postId) {
-      setExpandedId(null)
-      setComments([])
-      setCommentDraft("")
-      return
-    }
-    setExpandedId(postId)
+  const openPostDetail = (post: Post) => {
+    setSelectedPost(post)
     setCommentDraft("")
-    void loadComments(postId)
+    void loadComments(post.id)
+  }
+
+  const closePostDetail = () => {
+    setSelectedPost(null)
+    setComments([])
+    setCommentDraft("")
   }
 
   const submitComment = (postId: string) => {
@@ -316,16 +328,16 @@ export function FeedPage() {
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
       {/* Sort bar */}
       <div className="mb-5 flex items-center gap-2">
-        {sortOptions.map((option) => (
+        {visibleSorts.map((option) => (
           <button
             key={option}
             onClick={() => setSort(option)}
-            className={`rounded-full px-3.5 py-1 text-sm font-medium capitalize transition-colors ${sort === option
+            className={`rounded-full px-3.5 py-1 text-sm font-medium transition-colors ${sort === option
               ? "bg-foreground text-background"
               : "text-muted-foreground hover:bg-muted"
               }`}
           >
-            {option}
+            {sortLabels[option]}
           </button>
         ))}
       </div>
@@ -359,115 +371,171 @@ export function FeedPage() {
       {!loading && posts.length > 0 && (
         <div className="rounded-lg border overflow-hidden divide-y">
           {posts.map((post) => (
-            <div key={post.id}>
-              {/* Row */}
-              <div className="flex items-start gap-3 bg-card px-4 py-3.5 hover:bg-muted/30 transition-colors">
-                {/* Status */}
-                <span className={`mt-1 inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium leading-tight ${statusColor[post.task_status] ?? ""}`}>
-                  {post.task_status}
-                </span>
+            <div
+              key={post.id}
+              className="flex items-start gap-3 bg-card px-4 py-3.5 hover:bg-muted/30 transition-colors cursor-pointer"
+              onClick={() => openPostDetail(post)}
+            >
+              {/* Status */}
+              <span className={`mt-1 inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium leading-tight ${statusColor[post.task_status] ?? ""}`}>
+                {post.task_status}
+              </span>
 
-                {/* Title & meta */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-base font-medium leading-snug">{post.title}</span>
-                    {post.url && (
-                      <a
-                        href={post.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        <ExternalLink className="size-4" />
-                      </a>
-                    )}
-                  </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                    <Link href={`/profile/${post.author_handle}`} className="hover:text-foreground transition-colors">
-                      @{post.author_handle}
-                    </Link>
-                    <span>{timeAgo(post.created_at)}</span>
-                    {post.deadline && (
-                      <span className={`inline-flex items-center gap-1 ${isOverdue(post.deadline) ? "text-red-600 dark:text-red-400" : ""}`}>
-                        <CalendarClock className="size-3.5" />
-                        {timeAgo(post.deadline)}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => toggleComments(post.id)}
-                      className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+              {/* Title & meta */}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-base font-medium leading-snug">{post.title}</span>
+                  {post.url && (
+                    <a
+                      href={post.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <MessageCircle className="size-3.5" />
-                      {post.comment_count}
-                    </button>
-                    {post.claimed_by_handle && (
-                      <span className="text-amber-700 dark:text-amber-400">assigned to @{post.claimed_by_handle}</span>
-                    )}
-                    {/* FCFS: any agent can claim */}
-                    {post.task_status === "open" && post.assignment_mode === "fcfs" && (
-                      <button
-                        onClick={() => claimTask(post.id)}
-                        disabled={claimingId === post.id}
-                        className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                      >
-                        <Hand className="size-3.5" />
-                        {claimingId === post.id ? "Claiming..." : "Claim"}
-                      </button>
-                    )}
-                    {/* Owner-assigns: hint to comment */}
-                    {post.task_status === "open" && post.assignment_mode === "owner_assigns" && !isOwner(post) && (
-                      <button
-                        onClick={() => toggleComments(post.id)}
-                        className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 hover:text-foreground transition-colors"
-                      >
-                        <MessageCircle className="size-3.5" />
-                        Express interest
-                      </button>
-                    )}
-                    {/* Owner: complete button when someone is assigned */}
-                    {isOwner(post) && post.claimed_by_handle && post.task_status !== "done" && post.task_status !== "cancelled" && (
-                      <button
-                        onClick={() => completeTask(post.id)}
-                        disabled={completingId === post.id}
-                        className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 hover:text-foreground transition-colors"
-                      >
-                        <CheckCircle2 className="size-3.5" />
-                        {completingId === post.id ? "Completing..." : "Mark done"}
-                      </button>
-                    )}
-                  </div>
+                      <ExternalLink className="size-4" />
+                    </a>
+                  )}
                 </div>
-
-                {/* Points */}
-                <span className="shrink-0 text-sm font-medium text-muted-foreground">
-                  {post.points} pts
-                </span>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                  <Link
+                    href={`/profile/${post.author_handle}`}
+                    className="hover:text-foreground transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    @{post.author_handle}
+                  </Link>
+                  <span>{timeAgo(post.created_at)}</span>
+                  {post.deadline && (
+                    <span className={`inline-flex items-center gap-1 ${isOverdue(post.deadline) ? "text-red-600 dark:text-red-400" : ""}`}>
+                      <CalendarClock className="size-3.5" />
+                      {timeAgo(post.deadline)}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1">
+                    <MessageCircle className="size-3.5" />
+                    {post.comment_count}
+                  </span>
+                  {post.claimed_by_handle && (
+                    <span className="text-amber-700 dark:text-amber-400">assigned to @{post.claimed_by_handle}</span>
+                  )}
+                </div>
               </div>
 
-              {/* Expanded: description + contract + comments */}
-              {expandedId === post.id && (
-                <div className="border-t bg-muted/20 px-4 py-4 space-y-3">
-                  {post.content && (
-                    <p className="text-sm leading-relaxed text-muted-foreground">{post.content}</p>
-                  )}
+              {/* Points */}
+              <span className="shrink-0 text-sm font-medium text-muted-foreground">
+                {post.points} pts
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
-                  {/* Contract details */}
-                  {(post.acceptance_criteria || post.tests) && (
-                    <div className="rounded-md border bg-card px-3.5 py-2.5 space-y-2">
-                      {post.acceptance_criteria && (
-                        <div>
-                          <p className="text-xs font-semibold uppercase text-muted-foreground">Acceptance Criteria</p>
-                          <p className="text-sm whitespace-pre-wrap">{post.acceptance_criteria}</p>
-                        </div>
-                      )}
-                      {post.tests && (
-                        <div>
-                          <p className="text-xs font-semibold uppercase text-muted-foreground">Tests</p>
-                          <p className="text-sm font-mono whitespace-pre-wrap">{post.tests}</p>
-                        </div>
-                      )}
-                    </div>
+      {/* Post detail Sheet */}
+      <Sheet open={!!selectedPost} onOpenChange={(open) => { if (!open) closePostDetail() }}>
+        <SheetContent side="right" className="sm:max-w-lg w-full overflow-y-auto">
+          {selectedPost && (
+            <>
+              <SheetHeader>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-block shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium leading-tight ${statusColor[selectedPost.task_status] ?? ""}`}>
+                    {selectedPost.task_status}
+                  </span>
+                  <span className="text-sm font-medium text-muted-foreground">{selectedPost.points} pts</span>
+                </div>
+                <SheetTitle className="text-lg">{selectedPost.title}</SheetTitle>
+                <SheetDescription asChild>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                    <Link href={`/profile/${selectedPost.author_handle}`} className="hover:text-foreground transition-colors">
+                      @{selectedPost.author_handle}
+                    </Link>
+                    <span>{timeAgo(selectedPost.created_at)}</span>
+                    {selectedPost.deadline && (
+                      <span className={`inline-flex items-center gap-1 ${isOverdue(selectedPost.deadline) ? "text-red-600 dark:text-red-400" : ""}`}>
+                        <CalendarClock className="size-3.5" />
+                        {timeAgo(selectedPost.deadline)}
+                      </span>
+                    )}
+                    {selectedPost.claimed_by_handle && (
+                      <span className="text-amber-700 dark:text-amber-400">assigned to @{selectedPost.claimed_by_handle}</span>
+                    )}
+                  </div>
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="px-4 pb-6 space-y-4">
+                {/* External link */}
+                {selectedPost.url && (
+                  <a
+                    href={selectedPost.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                  >
+                    <ExternalLink className="size-3.5" />
+                    {selectedPost.url}
+                  </a>
+                )}
+
+                {/* Content */}
+                {selectedPost.content && (
+                  <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{selectedPost.content}</p>
+                )}
+
+                {/* Contract details */}
+                {(selectedPost.acceptance_criteria || selectedPost.tests) && (
+                  <div className="rounded-md border bg-card px-3.5 py-2.5 space-y-2">
+                    {selectedPost.acceptance_criteria && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">Acceptance Criteria</p>
+                        <p className="text-sm whitespace-pre-wrap">{selectedPost.acceptance_criteria}</p>
+                      </div>
+                    )}
+                    {selectedPost.tests && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">Tests</p>
+                        <p className="text-sm font-mono whitespace-pre-wrap">{selectedPost.tests}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  {/* FCFS: any agent can claim */}
+                  {selectedPost.task_status === "open" && selectedPost.assignment_mode === "fcfs" && (
+                    <button
+                      onClick={() => claimTask(selectedPost.id)}
+                      disabled={claimingId === selectedPost.id}
+                      className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <Hand className="size-3.5" />
+                      {claimingId === selectedPost.id ? "Claiming..." : "Claim"}
+                    </button>
                   )}
+                  {/* Owner-assigns: hint to comment */}
+                  {selectedPost.task_status === "open" && selectedPost.assignment_mode === "owner_assigns" && !isOwner(selectedPost) && (
+                    <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
+                      <MessageCircle className="size-3.5" />
+                      Express interest via comment
+                    </span>
+                  )}
+                  {/* Owner: complete button when someone is assigned */}
+                  {isOwner(selectedPost) && selectedPost.claimed_by_handle && selectedPost.task_status !== "done" && selectedPost.task_status !== "cancelled" && (
+                    <button
+                      onClick={() => completeTask(selectedPost.id)}
+                      disabled={completingId === selectedPost.id}
+                      className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 hover:text-foreground transition-colors"
+                    >
+                      <CheckCircle2 className="size-3.5" />
+                      {completingId === selectedPost.id ? "Completing..." : "Mark done"}
+                    </button>
+                  )}
+                </div>
+
+                {/* Comments */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold">Comments</h3>
 
                   {loadingComments && (
                     <p className="text-sm text-muted-foreground">Loading comments...</p>
@@ -483,14 +551,14 @@ export function FeedPage() {
                       <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                         <span>@{c.author_handle} &middot; {timeAgo(c.created_at)}</span>
                         {/* Owner can assign commenter for owner_assigns tasks */}
-                        {isOwner(post) && post.task_status === "open" && post.assignment_mode === "owner_assigns" && c.author_handle !== post.author_handle && (
+                        {isOwner(selectedPost) && selectedPost.task_status === "open" && selectedPost.assignment_mode === "owner_assigns" && c.author_handle !== selectedPost.author_handle && (
                           <button
-                            onClick={() => assignTask(post.id, c.author_handle)}
-                            disabled={assigningId === post.id}
+                            onClick={() => assignTask(selectedPost.id, c.author_handle)}
+                            disabled={assigningId === selectedPost.id}
                             className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 hover:text-foreground transition-colors"
                           >
                             <UserPlus className="size-3" />
-                            {assigningId === post.id ? "Assigning..." : "Assign"}
+                            {assigningId === selectedPost.id ? "Assigning..." : "Assign"}
                           </button>
                         )}
                       </div>
@@ -507,18 +575,18 @@ export function FeedPage() {
                     <Button
                       size="sm"
                       className="self-end"
-                      onClick={() => submitComment(post.id)}
+                      onClick={() => submitComment(selectedPost.id)}
                       disabled={submittingComment}
                     >
                       <Send className="size-4" />
                     </Button>
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Contextual registration dialog */}
       <RegisterDialog
