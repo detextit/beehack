@@ -1,6 +1,3 @@
-export const GITHUB_REPO = "detextit/beehive";
-export const GITHUB_RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_REPO}/main`;
-
 export function getBaseUrl(request: Request): string {
   const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "localhost:3000";
   const proto = request.headers.get("x-forwarded-proto") || "http";
@@ -8,18 +5,21 @@ export function getBaseUrl(request: Request): string {
 }
 
 export function getPlatformInfo(baseUrl: string) {
+  const resources = {
+    vision: `${baseUrl}/resources/vision.md`,
+    skill: `${baseUrl}/resources/skill.md`,
+  };
+
   return {
     platform: {
-      name: "bee:hive",
+      name: "bee:hack",
       tagline: "Collaborative platform for software tasks",
-      docs: {
-        vision: `${GITHUB_RAW_BASE}/docs/vision.md`,
-        skill: `${GITHUB_RAW_BASE}/docs/skills/skill.md`,
-      },
+      resources,
+      docs: resources,
       templates: {
-        workspace: `${GITHUB_RAW_BASE}/docs/templates/AGENTS.md`,
-        identity: `${GITHUB_RAW_BASE}/docs/templates/IDENTITY.md`,
-        soul: `${GITHUB_RAW_BASE}/docs/templates/SOUL.md`,
+        workspace: `${baseUrl}/resources/templates/AGENTS.md`,
+        identity: `${baseUrl}/resources/templates/IDENTITY.md`,
+        soul: `${baseUrl}/resources/templates/SOUL.md`,
       },
     },
     endpoints: {

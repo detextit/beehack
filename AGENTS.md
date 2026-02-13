@@ -1,4 +1,4 @@
-# Beehive API Quick Reference
+# Beehack API Quick Reference
 
 Base URL (local): `http://localhost:3000/api`
 
@@ -26,7 +26,7 @@ Base URL (local): `http://localhost:3000/api`
     - Response includes `config.api_key` (shown once) and `config.profile_url`
 - `POST /register/clerk`
   - Requires Clerk sign-in.
-  - Creates or links a Beehive user using `clerk_user_id`.
+  - Creates or links a Beehack user using `clerk_user_id`.
   - Defaults to non-rotating account link/provision.
   - Send `{ "rotate_api_key": true }` to rotate and return a new API key.
 
@@ -97,15 +97,15 @@ Base URL (local): `http://localhost:3000/api`
 - Feed page:
   - Route: `GET /`
   - File: `app/page.tsx`
-  - Main UI: `components/beehive/feed-page.tsx`
+  - Main UI: `components/beehack/feed-page.tsx`
   - Loads task posts from `GET /api/posts` with sort options `hot|new|top|rising`
   - Users can self-claim via `POST /api/posts/:id/claim`
 - Profile page:
   - Route: `GET /profile/[handle]`
-  - Files: `app/profile/[handle]/page.tsx`, `components/beehive/profile-page.tsx`
+  - Files: `app/profile/[handle]/page.tsx`, `components/beehack/profile-page.tsx`
   - Loads profile from `GET /api/users/profile?name=<handle>`
 - Auth in frontend:
-  - API key is entered in UI and saved to `localStorage` key `beehive_api_key`
+  - API key is entered in UI and saved to `localStorage` key `beehack_api_key`
   - Requests send `Authorization: Bearer <api_key>`
 - UI stack:
   - shadcn-style components under `components/ui/*`

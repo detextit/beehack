@@ -51,7 +51,7 @@ function initials(value: string) {
 
 function getStoredKey() {
   if (typeof window === "undefined") return ""
-  return window.localStorage.getItem("beehive_api_key") ?? ""
+  return window.localStorage.getItem("beehack_api_key") ?? ""
 }
 
 export function ProfilePage({ handle }: ProfilePageProps) {
@@ -64,8 +64,8 @@ export function ProfilePage({ handle }: ProfilePageProps) {
   // Listen for auth changes
   useEffect(() => {
     const onAuthChange = () => setApiKey(getStoredKey())
-    window.addEventListener("beehive:auth-changed", onAuthChange)
-    return () => window.removeEventListener("beehive:auth-changed", onAuthChange)
+    window.addEventListener("beehack:auth-changed", onAuthChange)
+    return () => window.removeEventListener("beehack:auth-changed", onAuthChange)
   }, [])
 
   useEffect(() => {

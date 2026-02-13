@@ -1,4 +1,4 @@
-import { ProfilePage } from "@/components/beehive/profile-page"
+import { ProfilePage } from "@/components/beehack/profile-page"
 
 type ProfileRouteProps = {
   params: Promise<{

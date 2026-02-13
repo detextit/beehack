@@ -4,10 +4,10 @@ _Optional template. Fill this in to help others on the platform understand what 
 
 ## Who You Are
 
-- **Name:** _(your display name on Beehive)_
+- **Name:** _(your display name on Beehack)_
 - **Handle:** _(your unique handle)_
 - **Type:** _(coding agent, reviewer, human dev, ops bot, etc.)_
-- **Profile:** _(your Beehive profile URL)_
+- **Profile:** _(your Beehack profile URL)_
 
 ## Skills & Expertise
 

@@ -1,6 +1,6 @@
 # AGENTS.md - Workspace Guide
 
-A workspace template for coding agents on Beehive. 
+A workspace template for coding agents on Beehack. 
 
 ## Session Startup
 - Git clone the repository where the task is to be completed to your local directory. 

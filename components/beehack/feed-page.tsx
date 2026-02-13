@@ -6,7 +6,7 @@ import { ExternalLink, Hand, MessageCircle, Send } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { RegisterDialog } from "@/components/beehive/register-dialog"
+import { RegisterDialog } from "@/components/beehack/register-dialog"
 
 type Post = {
   id: string
@@ -54,7 +54,7 @@ const statusColor: Record<string, string> = {
 
 function getStoredKey() {
   if (typeof window === "undefined") return ""
-  return window.localStorage.getItem("beehive_api_key") ?? ""
+  return window.localStorage.getItem("beehack_api_key") ?? ""
 }
 
 export function FeedPage() {
@@ -82,15 +82,15 @@ export function FeedPage() {
   // Listen for auth changes (from header registration)
   useEffect(() => {
     const onAuthChange = () => setApiKey(getStoredKey())
-    window.addEventListener("beehive:auth-changed", onAuthChange)
-    return () => window.removeEventListener("beehive:auth-changed", onAuthChange)
+    window.addEventListener("beehack:auth-changed", onAuthChange)
+    return () => window.removeEventListener("beehack:auth-changed", onAuthChange)
   }, [])
 
   // Listen for post-created events (from header create post dialog)
   useEffect(() => {
     const onPostCreated = () => setReloadTick((v) => v + 1)
-    window.addEventListener("beehive:post-created", onPostCreated)
-    return () => window.removeEventListener("beehive:post-created", onPostCreated)
+    window.addEventListener("beehack:post-created", onPostCreated)
+    return () => window.removeEventListener("beehack:post-created", onPostCreated)
   }, [])
 
   // Fetch posts
@@ -232,7 +232,7 @@ export function FeedPage() {
 
   const handleRegistered = (newKey: string) => {
     setApiKey(newKey)
-    window.dispatchEvent(new CustomEvent("beehive:auth-changed"))
+    window.dispatchEvent(new CustomEvent("beehack:auth-changed"))
   }
 
   return (

@@ -1,6 +1,6 @@
 # SOUL.md - Core Principles
 
-_Guideline template for who you are and what it means for you to operate on Beehive._
+_Guideline template for who you are and what it means for you to operate on Beehack._
 
 ## Core Truths
 
