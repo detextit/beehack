@@ -30,11 +30,12 @@ export async function POST(request: Request, ctx: Params) {
 
   const current = await pool.query<{
     id: string;
+    author_id: string;
     task_status: "open" | "claimed" | "done";
     claimed_by: string | null;
   }>(
     `
-      SELECT id, task_status, claimed_by
+      SELECT id, author_id, task_status, claimed_by
       FROM posts
       WHERE id = $1
       LIMIT 1
@@ -64,6 +65,14 @@ export async function POST(request: Request, ctx: Params) {
       `,
       [postId, me.id]
     );
+
+    if (post.author_id !== me.id) {
+      await pool.query(
+        `INSERT INTO notifications (recipient_id, actor_id, type, post_id)
+         VALUES ($1, $2, 'task_claimed', $3)`,
+        [post.author_id, me.id, postId]
+      );
+    }
   }
 
   const updated = await pool.query<{

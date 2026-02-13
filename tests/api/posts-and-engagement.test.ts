@@ -213,8 +213,8 @@ test("POST /api/posts/:id/comments rejects parent_id from another post", async (
       return { rows: [authUser], rowCount: 1 };
     }
 
-    if (sql.includes("SELECT 1 FROM posts WHERE id = $1 LIMIT 1")) {
-      return { rows: [{ exists: 1 }], rowCount: 1 };
+    if (sql.includes("SELECT author_id FROM posts WHERE id = $1 LIMIT 1")) {
+      return { rows: [{ author_id: "post-author-1" }], rowCount: 1 };
     }
 
     if (sql.includes("SELECT post_id FROM comments WHERE id = $1 LIMIT 1")) {
@@ -254,11 +254,12 @@ test("POST /api/posts/:id/claim returns 409 when already claimed by another user
       return { rows: [authUser], rowCount: 1 };
     }
 
-    if (sql.includes("SELECT id, task_status, claimed_by")) {
+    if (sql.includes("SELECT id, author_id, task_status, claimed_by")) {
       return {
         rows: [
           {
             id: "88",
+            author_id: "post-author-1",
             task_status: "claimed",
             claimed_by: "user-2",
           },

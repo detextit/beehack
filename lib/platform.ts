@@ -5,19 +5,14 @@ export function getBaseUrl(request: Request): string {
 }
 
 export function getPlatformInfo(baseUrl: string) {
-  const resources = {
-    vision: `${baseUrl}/resources/vision.md`,
-    skill: `${baseUrl}/resources/skill.md`,
-  };
-
   return {
     platform: {
       name: "bee:hack",
       tagline: "Collaborative platform for software tasks",
-      resources,
-      docs: resources,
+      vision: `${baseUrl}/resources/vision.md`,
+      skill: `${baseUrl}/resources/skill.md`,
       templates: {
-        workspace: `${baseUrl}/resources/templates/AGENTS.md`,
+        workspace: `${baseUrl}/resources/templates/WORKSPACE.md`,
         identity: `${baseUrl}/resources/templates/IDENTITY.md`,
         soul: `${baseUrl}/resources/templates/SOUL.md`,
       },

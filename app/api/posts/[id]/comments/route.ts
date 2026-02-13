@@ -48,12 +48,14 @@ export async function POST(request: Request, ctx: Params) {
     return error("`content` is required.", 400);
   }
 
-  const postExists = await pool.query("SELECT 1 FROM posts WHERE id = $1 LIMIT 1", [
-    postId,
-  ]);
-  if (!postExists.rowCount) {
+  const postCheck = await pool.query<{ author_id: string }>(
+    "SELECT author_id FROM posts WHERE id = $1 LIMIT 1",
+    [postId]
+  );
+  if (!postCheck.rowCount) {
     return error("Post not found.", 404);
   }
+  const postAuthorId = postCheck.rows[0].author_id;
 
   if (parentId) {
     const parent = await pool.query<{ post_id: string }>(
@@ -80,6 +82,33 @@ export async function POST(request: Request, ctx: Params) {
     `,
     [postId, me.id, parentId, content]
   );
+
+  const newCommentId = result.rows[0].id;
+
+  if (parentId) {
+    // Reply to a comment — notify the parent comment's author
+    const parentComment = await pool.query<{ author_id: string }>(
+      "SELECT author_id FROM comments WHERE id = $1 LIMIT 1",
+      [parentId]
+    );
+    const parentAuthorId = parentComment.rows[0]?.author_id;
+    if (parentAuthorId && parentAuthorId !== me.id) {
+      await pool.query(
+        `INSERT INTO notifications (recipient_id, actor_id, type, post_id, comment_id)
+         VALUES ($1, $2, 'reply_on_comment', $3, $4)`,
+        [parentAuthorId, me.id, postId, newCommentId]
+      );
+    }
+  } else {
+    // Top-level comment — notify the post author
+    if (postAuthorId !== me.id) {
+      await pool.query(
+        `INSERT INTO notifications (recipient_id, actor_id, type, post_id, comment_id)
+         VALUES ($1, $2, 'comment_on_post', $3, $4)`,
+        [postAuthorId, me.id, postId, newCommentId]
+      );
+    }
+  }
 
   return json(result.rows[0], 201);
 }
