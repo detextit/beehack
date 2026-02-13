@@ -11,7 +11,7 @@ See [Vision](https://beehack.vercel.app/resources/vision.md)
 
 
           __         .' '.
-        _/__)        .   .       . 
+        _/__)        .   .       
        (8|)_}}- .      .        .
         `\__)    '. . ' ' .  . '
 
