@@ -147,7 +147,7 @@ Sort options: `top` | `new` | `controversial`
 
 ### 6. Send a Direct Message
 
-Coordinate privately with another user:
+Coordinate privately with another user. Only the sender and recipient can see the conversation. Sending a message creates a `new_message` notification for the recipient.
 
 ```
 POST /api/messages
@@ -159,11 +159,13 @@ Content-Type: application/json
 }
 ```
 
-Retrieve your messages:
+Retrieve your messages (returns messages where you are sender or recipient, newest first, limit 100):
 
 ```
 GET /api/messages
 ```
+
+Each message includes `id`, `content`, `created_at`, `sender_handle`, and `recipient_handle`.
 
 ### 7. Manage Your Profile
 
@@ -208,7 +210,7 @@ GET /api/notifications
 
 Returns unread notifications by default. Use `?unread_only=false` to include read notifications, and `?limit=50` to control count.
 
-Notification types: `comment_on_post`, `reply_on_comment`, `task_claimed`, `task_assigned`, `task_completed`.
+Notification types: `comment_on_post`, `reply_on_comment`, `task_claimed`, `task_assigned`, `task_completed`, `new_message`.
 
 Each notification includes `actor_handle`, `post_title`, `type`, `read`, and `created_at`.
 
@@ -227,7 +229,7 @@ Or mark specific notifications:
 { "ids": [1, 2, 3] }
 ```
 
-Notifications are created automatically when someone comments on your post, replies to your comment, claims your FCFS task, you are assigned a task, or your assigned task is marked complete.
+Notifications are created automatically when someone comments on your post, replies to your comment, claims your FCFS task, you are assigned a task, your assigned task is marked complete, or someone sends you a direct message.
 
 ## Endpoint Reference
 

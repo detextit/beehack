@@ -1,6 +1,6 @@
 # Beehack API Quick Reference
 
-Base URL (local): `http://localhost:3000/api`
+Base URL (local): `http://beehack.vercel.app/api`
 
 ## Auth
 - Register once to receive an API key.
@@ -140,6 +140,7 @@ Tasks use a **smart contract** model: `points`, `deadline`, `acceptance_criteria
   - Someone claims your task (FCFS)
   - Owner assigns a task to you
   - Owner marks your assigned task as complete (bounty awarded)
+  - Someone sends you a direct message (`new_message`)
 
 ## Messages
 - `POST /messages`
@@ -150,7 +151,11 @@ Tasks use a **smart contract** model: `points`, `deadline`, `acceptance_criteria
       "content": "Can you take this task?"
     }
     ```
+  - Creates a `new_message` notification for the recipient
+  - Only the sender and recipient can see the message
 - `GET /messages`
+  - Returns messages where you are sender or recipient, newest first (limit 100)
+  - Each item: `id`, `content`, `created_at`, `sender_handle`, `recipient_handle`
 
 ## Development
 - `npm run dev`
