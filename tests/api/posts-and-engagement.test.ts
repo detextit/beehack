@@ -378,3 +378,185 @@ test("POST /api/messages returns 404 when recipient handle does not exist", asyn
   assert.equal(response.status, 404);
   assert.match(payload.error, /Recipient not found/i);
 });
+
+test("GET /api/posts with 'foryou' sort requires authentication", async (t) => {
+  const pool = await loadPool(import.meta.url);
+  const route = await loadDefaultModuleFrom<PostsRoute>(
+    import.meta.url,
+    "../../app/api/posts/route.ts"
+  );
+
+  installQueryMock(t, pool, () => {
+    return { rows: [], rowCount: 0 };
+  });
+
+  const response = await route.GET(
+    new Request("http://localhost/api/posts?sort=foryou")
+  );
+
+  const payload = (await response.json()) as { error: string };
+
+  assert.equal(response.status, 401);
+  assert.match(payload.error, /Authentication required/i);
+});
+
+test("GET /api/posts with 'foryou' sort shows followed users' posts first", async (t) => {
+  const pool = await loadPool(import.meta.url);
+  const route = await loadDefaultModuleFrom<PostsRoute>(
+    import.meta.url,
+    "../../app/api/posts/route.ts"
+  );
+
+  const calls = installQueryMock(t, pool, ({ sql }) => {
+    if (sql.includes(AUTH_QUERY_FRAGMENT)) {
+      return { rows: [authUser], rowCount: 1 };
+    }
+
+    if (sql.includes("SELECT followee_id FROM follows")) {
+      return {
+        rows: [{ followee_id: "user-2" }, { followee_id: "user-3" }],
+        rowCount: 2,
+      };
+    }
+
+    if (sql.includes("WITH post_with_comments")) {
+      return {
+        rows: [
+          {
+            id: "20",
+            title: "Followed user post 1",
+            url: null,
+            content: "recent from followed",
+            points: 5,
+            task_status: "open",
+            claimed_by_handle: null,
+            created_at: "2026-02-13T10:00:00.000Z",
+            author_handle: "followed_alice",
+            comment_count: "1",
+            deadline: null,
+            acceptance_criteria: null,
+            tests: null,
+            assignment_mode: "fcfs",
+          },
+          {
+            id: "21",
+            title: "Other post",
+            url: null,
+            content: "high engagement",
+            points: 100,
+            task_status: "open",
+            claimed_by_handle: null,
+            created_at: "2026-02-12T08:00:00.000Z",
+            author_handle: "random_bob",
+            comment_count: "50",
+            deadline: null,
+            acceptance_criteria: null,
+            tests: null,
+            assignment_mode: "owner_assigns",
+          },
+        ],
+        rowCount: 2,
+      };
+    }
+
+    return { rows: [], rowCount: 0 };
+  });
+
+  const response = await route.GET(
+    new Request("http://localhost/api/posts?sort=foryou", {
+      headers: {
+        authorization: "Bearer test_api_key",
+      },
+    })
+  );
+
+  const payload = (await response.json()) as {
+    sort: string;
+    items: Array<{ id: string; title: string }>;
+  };
+
+  const forYouQuery = calls.find((call) => call.sql.includes("WITH post_with_comments"));
+  assert.ok(forYouQuery, "should use CTE for foryou sort");
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.sort, "foryou");
+  assert.equal(
+    forYouQuery.sql.includes("CASE WHEN pc.author_id = ANY($1)"),
+    true,
+    "should prioritize followed users' posts"
+  );
+  assert.equal(
+    forYouQuery.sql.includes("pc.comment_count"),
+    true,
+    "should use CTE comment_count to avoid duplicate subquery"
+  );
+});
+
+test("GET /api/posts with 'foryou' sort falls back to hot when user follows nobody", async (t) => {
+  const pool = await loadPool(import.meta.url);
+  const route = await loadDefaultModuleFrom<PostsRoute>(
+    import.meta.url,
+    "../../app/api/posts/route.ts"
+  );
+
+  const calls = installQueryMock(t, pool, ({ sql }) => {
+    if (sql.includes(AUTH_QUERY_FRAGMENT)) {
+      return { rows: [authUser], rowCount: 1 };
+    }
+
+    if (sql.includes("SELECT followee_id FROM follows")) {
+      return { rows: [], rowCount: 0 };
+    }
+
+    if (sql.includes("FROM posts p")) {
+      return {
+        rows: [
+          {
+            id: "30",
+            title: "Hot post",
+            url: null,
+            content: "popular",
+            points: 10,
+            task_status: "open",
+            claimed_by_handle: null,
+            created_at: "2026-02-13T09:00:00.000Z",
+            author_handle: "alice",
+            comment_count: 5,
+            deadline: null,
+            acceptance_criteria: null,
+            tests: null,
+            assignment_mode: "fcfs",
+          },
+        ],
+        rowCount: 1,
+      };
+    }
+
+    return { rows: [], rowCount: 0 };
+  });
+
+  const response = await route.GET(
+    new Request("http://localhost/api/posts?sort=foryou", {
+      headers: {
+        authorization: "Bearer test_api_key",
+      },
+    })
+  );
+
+  const payload = (await response.json()) as {
+    sort: string;
+    items: Array<{ id: string }>;
+  };
+
+  const postsQuery = calls.find((call) => call.sql.includes("FROM posts p"));
+  assert.ok(postsQuery, "should query posts when no follows");
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.sort, "foryou");
+  assert.equal(payload.items.length, 1);
+  assert.equal(
+    postsQuery.sql.includes("comment_count::int"),
+    true,
+    "should use integer comment count for hot sort calculation"
+  );
+});

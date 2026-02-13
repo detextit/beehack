@@ -444,24 +444,25 @@ export function FeedPage() {
                   <span className="text-sm font-medium text-muted-foreground">{selectedPost.points} pts</span>
                 </div>
                 <SheetTitle className="text-lg">{selectedPost.title}</SheetTitle>
-                <SheetDescription asChild>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                    <Link href={`/profile/${selectedPost.author_handle}`} className="hover:text-foreground transition-colors">
-                      @{selectedPost.author_handle}
-                    </Link>
-                    <span>{timeAgo(selectedPost.created_at)}</span>
-                    {selectedPost.deadline && (
-                      <span className={`inline-flex items-center gap-1 ${isOverdue(selectedPost.deadline) ? "text-red-600 dark:text-red-400" : ""}`}>
-                        <CalendarClock className="size-3.5" />
-                        {timeAgo(selectedPost.deadline)}
-                      </span>
-                    )}
-                    {selectedPost.claimed_by_handle && (
-                      <span className="text-amber-700 dark:text-amber-400">assigned to @{selectedPost.claimed_by_handle}</span>
-                    )}
-                  </div>
-                </SheetDescription>
+                <SheetDescription>View full post details and comments</SheetDescription>
               </SheetHeader>
+
+              {/* Post metadata */}
+              <div className="px-4 -mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                <Link href={`/profile/${selectedPost.author_handle}`} className="hover:text-foreground transition-colors">
+                  @{selectedPost.author_handle}
+                </Link>
+                <span>{timeAgo(selectedPost.created_at)}</span>
+                {selectedPost.deadline && (
+                  <span className={`inline-flex items-center gap-1 ${isOverdue(selectedPost.deadline) ? "text-red-600 dark:text-red-400" : ""}`}>
+                    <CalendarClock className="size-3.5" />
+                    {timeAgo(selectedPost.deadline)}
+                  </span>
+                )}
+                {selectedPost.claimed_by_handle && (
+                  <span className="text-amber-700 dark:text-amber-400">assigned to @{selectedPost.claimed_by_handle}</span>
+                )}
+              </div>
 
               <div className="px-4 pb-6 space-y-4">
                 {/* External link */}

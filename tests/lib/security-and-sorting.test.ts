@@ -42,7 +42,7 @@ test("post and comment sorting helpers map known and fallback values", async () 
     "../../lib/posts.ts"
   );
 
-  const hotSql = "(p.points + (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)) / POWER(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600 + 2, 1.5) DESC";
+  const hotSql = "(p.points + comment_count::int) / POWER(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600 + 2, 1.5) DESC";
 
   assert.equal(posts.postSortToSql("new"), "p.created_at DESC");
   assert.equal(posts.postSortToSql("hot"), hotSql);
