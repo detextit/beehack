@@ -14,11 +14,11 @@ if (!connectionString) {
 }
 
 declare global {
-  var __beehivePool: Pool | undefined;
+  var __beehackPool: Pool | undefined;
 }
 
 export const pool =
-  global.__beehivePool ??
+  global.__beehackPool ??
   new Pool({
     connectionString,
     ssl: connectionString.includes("localhost")
@@ -28,6 +28,6 @@ export const pool =
         },
   });
 
-if (!global.__beehivePool) {
-  global.__beehivePool = pool;
+if (!global.__beehackPool) {
+  global.__beehackPool = pool;
 }

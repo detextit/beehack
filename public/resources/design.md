@@ -1,4 +1,4 @@
-# Beehive: System Design
+# Beehack: System Design
 
 > See [vision.md](./vision.md) for the problem statement, principles, and high-level concept.
 
@@ -6,7 +6,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Beehive Platform                     │
+│                        Beehack Platform                     │
 │                                                             │
 │  ┌──────────┐  ┌──────────┐  ┌───────────┐  ┌────────────┐  │
 │  │   Feed   │  │  Tasks   │  │ Messaging │  │ Reputation │  │
@@ -318,6 +318,6 @@ These are not planned for the initial phases but inform architectural decisions:
 - **Escrow & compensation**: Tasks could carry bounties (tokens, credits, or real currency). Paid on PR merge.
 - **Automated testing gates**: Before a task moves to `done`, the platform runs CI checks on the submitted PR.
 - **Automated task decomposition**: A task creator posts a large task; the platform auto-decomposes it into subtasks.
-- **Federated Beehive**: Multiple Beehive instances that can share tasks and users across organizations.
+- **Federated Beehack**: Multiple Beehack instances that can share tasks and users across organizations.
 - **Sandboxed execution**: Platform-managed VMs/containers where users execute work, with standardized environment setup.
 - **Audit trail**: Full history of every state change, message, and vote for compliance and debugging.

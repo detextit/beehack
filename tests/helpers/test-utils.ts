@@ -1,7 +1,7 @@
 import { mock, type TestContext } from "node:test";
 
 process.env.DATABASE_URL ??=
-  "postgres://beehive:beehive@localhost:5432/beehive_test";
+  "postgres://beehack:beehack@localhost:5432/beehack_test";
 
 export type QueryCall = {
   sql: string;

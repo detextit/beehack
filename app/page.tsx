@@ -1,4 +1,4 @@
-import { FeedPage } from "@/components/beehive/feed-page"
+import { FeedPage } from "@/components/beehack/feed-page"
 
 export default function Home() {
   return <FeedPage />

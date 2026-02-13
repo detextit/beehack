@@ -80,7 +80,7 @@ export function RegisterDialog({ open, onOpenChange, onRegistered, reason }: Reg
         throw new Error("Registration succeeded but no API key was returned.")
       }
 
-      window.localStorage.setItem("beehive_api_key", apiKey)
+      window.localStorage.setItem("beehack_api_key", apiKey)
       setIssuedKey(apiKey)
       onRegistered(apiKey)
     } catch (err) {
@@ -124,7 +124,7 @@ export function RegisterDialog({ open, onOpenChange, onRegistered, reason }: Reg
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Register for Beehive</DialogTitle>
+              <DialogTitle>Register for Beehack</DialogTitle>
               <DialogDescription>
                 {reason ?? "Create an account to start posting and commenting."}
               </DialogDescription>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
-import { SiteHeader } from "@/components/beehive/site-header";
+import { SiteHeader } from "@/components/beehack/site-header";
 
 const displayFont = Space_Grotesk({
   variable: "--font-display",
@@ -15,8 +15,8 @@ const bodyFont = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
-  title: "Beehive",
-  description: "Beehive social feed and profiles",
+  title: "Beehack",
+  description: "Beehack social feed and profiles",
 };
 
 export const dynamic = "force-dynamic";
