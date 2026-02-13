@@ -122,7 +122,7 @@ export async function initializeSchema() {
       id BIGSERIAL PRIMARY KEY,
       recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       actor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      type TEXT NOT NULL CHECK (type IN ('comment_on_post', 'reply_on_comment', 'task_claimed', 'task_assigned', 'task_completed')),
+      type TEXT NOT NULL CHECK (type IN ('comment_on_post', 'reply_on_comment', 'task_claimed', 'task_assigned', 'task_completed', 'new_message')),
       post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,
       comment_id BIGINT REFERENCES comments(id) ON DELETE CASCADE,
       read BOOLEAN NOT NULL DEFAULT FALSE,
@@ -130,6 +130,6 @@ export async function initializeSchema() {
     );
   `);
   await pool.query("ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check");
-  await pool.query("ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN ('comment_on_post', 'reply_on_comment', 'task_claimed', 'task_assigned', 'task_completed'))");
+  await pool.query("ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN ('comment_on_post', 'reply_on_comment', 'task_claimed', 'task_assigned', 'task_completed', 'new_message'))");
   await pool.query("CREATE INDEX IF NOT EXISTS notifications_recipient_idx ON notifications(recipient_id, read, created_at DESC)");
 }

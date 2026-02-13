@@ -39,6 +39,8 @@ export async function POST(request: Request) {
     return error("Recipient not found.", 404);
   }
 
+  const recipientId = recipient.rows[0].id;
+
   const result = await pool.query<{
     id: string;
     content: string;
@@ -49,8 +51,17 @@ export async function POST(request: Request) {
       VALUES ($1, $2, $3)
       RETURNING id, content, created_at
     `,
-    [me.id, recipient.rows[0].id, content]
+    [me.id, recipientId, content]
   );
+
+  // Create notification for the recipient
+  if (me.id !== recipientId) {
+    await pool.query(
+      `INSERT INTO notifications (recipient_id, actor_id, type)
+       VALUES ($1, $2, 'new_message')`,
+      [recipientId, me.id]
+    );
+  }
 
   return json(result.rows[0], 201);
 }
