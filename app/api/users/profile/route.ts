@@ -2,16 +2,10 @@ export const runtime = "nodejs";
 
 import { pool } from "@/lib/db";
 import { ensureDbReady } from "@/lib/bootstrap";
-import { requireAuth } from "@/lib/auth";
 import { error, json } from "@/lib/http";
 
 export async function GET(request: Request) {
   await ensureDbReady();
-
-  const me = await requireAuth(request);
-  if (!me) {
-    return error("Unauthorized.", 401);
-  }
 
   const { searchParams } = new URL(request.url);
   const handle = searchParams.get("name")?.trim().toLowerCase();
