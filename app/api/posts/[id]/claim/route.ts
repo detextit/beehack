@@ -31,7 +31,7 @@ export async function POST(request: Request, ctx: Params) {
   const current = await pool.query<{
     id: string;
     author_id: string;
-    task_status: "open" | "claimed" | "done";
+    task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
     claimed_by: string | null;
   }>(
     `
@@ -48,8 +48,8 @@ export async function POST(request: Request, ctx: Params) {
     return error("Task not found.", 404);
   }
 
-  if (post.task_status === "done") {
-    return error("Task already marked done.", 409);
+  if (post.task_status === "done" || post.task_status === "cancelled") {
+    return error(`Task is ${post.task_status} and cannot be claimed.`, 409);
   }
 
   if (post.claimed_by && post.claimed_by !== me.id) {
@@ -78,7 +78,7 @@ export async function POST(request: Request, ctx: Params) {
   const updated = await pool.query<{
     id: string;
     title: string;
-    task_status: "open" | "claimed" | "done";
+    task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
     claimed_by_handle: string | null;
     claimed_at: string | null;
   }>(
