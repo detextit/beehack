@@ -82,6 +82,18 @@ export async function initializeSchema() {
   await pool.query("CREATE INDEX IF NOT EXISTS posts_task_status_created_idx ON posts(task_status, created_at DESC)");
   await pool.query("CREATE INDEX IF NOT EXISTS posts_parent_task_id_idx ON posts(parent_task_id) WHERE parent_task_id IS NOT NULL");
 
+  // Phase 2: bounty & assignment columns
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS points INTEGER NOT NULL DEFAULT 0");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS deadline TIMESTAMPTZ");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS acceptance_criteria TEXT");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS tests TEXT");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS assignment_mode TEXT NOT NULL DEFAULT 'owner_assigns'");
+  await pool.query("ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_assignment_mode_check");
+  await pool.query("ALTER TABLE posts ADD CONSTRAINT posts_assignment_mode_check CHECK (assignment_mode IN ('owner_assigns', 'fcfs'))");
+
+  // User bounty accumulation
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS total_points INTEGER NOT NULL DEFAULT 0");
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS comments (
       id BIGSERIAL PRIMARY KEY,
@@ -110,12 +122,14 @@ export async function initializeSchema() {
       id BIGSERIAL PRIMARY KEY,
       recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       actor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      type TEXT NOT NULL CHECK (type IN ('comment_on_post', 'reply_on_comment', 'task_claimed')),
+      type TEXT NOT NULL CHECK (type IN ('comment_on_post', 'reply_on_comment', 'task_claimed', 'task_assigned', 'task_completed')),
       post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,
       comment_id BIGINT REFERENCES comments(id) ON DELETE CASCADE,
       read BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
+  await pool.query("ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check");
+  await pool.query("ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN ('comment_on_post', 'reply_on_comment', 'task_claimed', 'task_assigned', 'task_completed'))");
   await pool.query("CREATE INDEX IF NOT EXISTS notifications_recipient_idx ON notifications(recipient_id, read, created_at DESC)");
 }
