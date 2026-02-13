@@ -129,16 +129,18 @@ export async function GET(request: Request) {
   if (sort === "foryou") {
     const me = await requireAuth(request);
 
-    let followedIds: string[] = [];
-    if (me) {
-      const followsResult = await pool.query<{ followee_id: string }>(
-        `SELECT followee_id FROM follows WHERE follower_id = $1`,
-        [me.id]
-      );
-      followedIds = followsResult.rows.map((r: { followee_id: string }) => r.followee_id);
+    // Require authentication for "foryou" sort
+    if (!me) {
+      return error("Authentication required for 'foryou' sort.", 401);
     }
 
-    // If not authenticated or following nobody, fall back to hot
+    const followsResult = await pool.query<{ followee_id: string }>(
+      `SELECT followee_id FROM follows WHERE follower_id = $1`,
+      [me.id]
+    );
+    const followedIds = followsResult.rows.map((r: { followee_id: string }) => r.followee_id);
+
+    // If following nobody, fall back to hot sort
     if (followedIds.length === 0) {
       const orderBy = postSortToSql("hot");
       const result = await pool.query<PostRow>(`
@@ -146,7 +148,7 @@ export async function GET(request: Request) {
           p.id, p.title, p.url, p.content, p.points, p.task_status,
           claimant.handle AS claimed_by_handle, p.created_at,
           u.handle AS author_handle,
-          (SELECT COUNT(*)::text FROM comments c WHERE c.post_id = p.id) AS comment_count,
+          (SELECT COUNT(*)::int FROM comments c WHERE c.post_id = p.id) AS comment_count,
           p.deadline, p.acceptance_criteria, p.tests, p.assignment_mode
         FROM posts p
         JOIN users u ON u.id = p.author_id
@@ -168,19 +170,27 @@ export async function GET(request: Request) {
     // Followed users' posts first (by recency), then remaining by hot order
     const result = await pool.query<PostRow>(
       `
+        WITH post_with_comments AS (
+          SELECT
+            p.id, p.title, p.url, p.content, p.points, p.task_status,
+            p.created_at, p.deadline, p.acceptance_criteria, p.tests, p.assignment_mode,
+            p.author_id, p.claimed_by,
+            (SELECT COUNT(*)::int FROM comments c WHERE c.post_id = p.id) AS comment_count
+          FROM posts p
+        )
         SELECT
-          p.id, p.title, p.url, p.content, p.points, p.task_status,
-          claimant.handle AS claimed_by_handle, p.created_at,
+          pc.id, pc.title, pc.url, pc.content, pc.points, pc.task_status,
+          claimant.handle AS claimed_by_handle, pc.created_at,
           u.handle AS author_handle,
-          (SELECT COUNT(*)::text FROM comments c WHERE c.post_id = p.id) AS comment_count,
-          p.deadline, p.acceptance_criteria, p.tests, p.assignment_mode
-        FROM posts p
-        JOIN users u ON u.id = p.author_id
-        LEFT JOIN users claimant ON claimant.id = p.claimed_by
+          pc.comment_count::text AS comment_count,
+          pc.deadline, pc.acceptance_criteria, pc.tests, pc.assignment_mode
+        FROM post_with_comments pc
+        JOIN users u ON u.id = pc.author_id
+        LEFT JOIN users claimant ON claimant.id = pc.claimed_by
         ORDER BY
-          CASE WHEN p.author_id = ANY($1) THEN 0 ELSE 1 END,
-          CASE WHEN p.author_id = ANY($1) THEN p.created_at END DESC,
-          (p.points + (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)) / POWER(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600 + 2, 1.5) DESC
+          CASE WHEN pc.author_id = ANY($1) THEN 0 ELSE 1 END,
+          CASE WHEN pc.author_id = ANY($1) THEN pc.created_at END DESC,
+          (pc.points + pc.comment_count) / POWER(EXTRACT(EPOCH FROM (NOW() - pc.created_at)) / 3600 + 2, 1.5) DESC
         LIMIT $2
       `,
       [followedIds, limit]
