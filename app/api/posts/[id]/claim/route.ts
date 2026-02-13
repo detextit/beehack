@@ -33,9 +33,10 @@ export async function POST(request: Request, ctx: Params) {
     author_id: string;
     task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
     claimed_by: string | null;
+    assignment_mode: string;
   }>(
     `
-      SELECT id, author_id, task_status, claimed_by
+      SELECT id, author_id, task_status, claimed_by, assignment_mode
       FROM posts
       WHERE id = $1
       LIMIT 1
@@ -46,6 +47,10 @@ export async function POST(request: Request, ctx: Params) {
   const post = current.rows[0];
   if (!post) {
     return error("Task not found.", 404);
+  }
+
+  if (post.assignment_mode === "owner_assigns") {
+    return error("This task requires owner assignment. Express interest via comments.", 403);
   }
 
   if (post.task_status === "done" || post.task_status === "cancelled") {

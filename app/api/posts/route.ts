@@ -11,6 +11,11 @@ type CreatePostBody = {
   description?: string;
   url?: string;
   content?: string;
+  points?: number;
+  deadline?: string;
+  acceptance_criteria?: string;
+  tests?: string;
+  assignment_mode?: string;
 };
 
 export async function POST(request: Request) {
@@ -41,23 +46,45 @@ export async function POST(request: Request) {
     return error("`description` (or `content`) is required for a task post.", 400);
   }
 
+  const points = Number(body.points);
+  if (!Number.isInteger(points) || points < 1) {
+    return error("`points` is required and must be a positive integer.", 400);
+  }
+
+  const deadline = body.deadline?.trim() || null;
+  if (deadline && isNaN(Date.parse(deadline))) {
+    return error("`deadline` must be a valid ISO timestamp.", 400);
+  }
+
+  const acceptanceCriteria = body.acceptance_criteria?.trim() || null;
+  const tests = body.tests?.trim() || null;
+
+  const assignmentMode = body.assignment_mode?.trim() || "owner_assigns";
+  if (!["owner_assigns", "fcfs"].includes(assignmentMode)) {
+    return error("`assignment_mode` must be 'owner_assigns' or 'fcfs'.", 400);
+  }
+
   const result = await pool.query<{
     id: string;
     title: string;
     url: string | null;
     content: string | null;
-    score: number;
+    points: number;
     task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
     claimed_by_handle: string | null;
     created_at: string;
     author_handle: string;
+    deadline: string | null;
+    acceptance_criteria: string | null;
+    tests: string | null;
+    assignment_mode: string;
   }>(
     `
-      INSERT INTO posts (author_id, title, url, content, task_status)
-      VALUES ($1, $2, $3, $4, 'open')
-      RETURNING id, title, url, content, score, task_status, created_at
+      INSERT INTO posts (author_id, title, url, content, points, deadline, acceptance_criteria, tests, assignment_mode, task_status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open')
+      RETURNING id, title, url, content, points, task_status, created_at, deadline, acceptance_criteria, tests, assignment_mode
     `,
-    [me.id, title, url, content]
+    [me.id, title, url, content, points, deadline, acceptanceCriteria, tests, assignmentMode]
   );
 
   return json(
@@ -88,19 +115,23 @@ export async function GET(request: Request) {
     title: string;
     url: string | null;
     content: string | null;
-    score: number;
+    points: number;
     task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
     claimed_by_handle: string | null;
     created_at: string;
     author_handle: string;
     comment_count: string;
+    deadline: string | null;
+    acceptance_criteria: string | null;
+    tests: string | null;
+    assignment_mode: string;
   }>(`
       SELECT
         p.id,
         p.title,
         p.url,
         p.content,
-        p.score,
+        p.points,
         p.task_status,
         claimant.handle AS claimed_by_handle,
         p.created_at,
@@ -109,7 +140,11 @@ export async function GET(request: Request) {
           SELECT COUNT(*)::text
           FROM comments c
           WHERE c.post_id = p.id
-        ) AS comment_count
+        ) AS comment_count,
+        p.deadline,
+        p.acceptance_criteria,
+        p.tests,
+        p.assignment_mode
       FROM posts p
       JOIN users u ON u.id = p.author_id
       LEFT JOIN users claimant ON claimant.id = p.claimed_by

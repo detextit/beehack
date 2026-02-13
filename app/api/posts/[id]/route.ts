@@ -28,12 +28,16 @@ export async function GET(request: Request, ctx: Params) {
     title: string;
     url: string | null;
     content: string | null;
-    score: number;
+    points: number;
     task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
     claimed_by_handle: string | null;
     created_at: string;
     author_handle: string;
     comment_count: string;
+    deadline: string | null;
+    acceptance_criteria: string | null;
+    tests: string | null;
+    assignment_mode: string;
   }>(
     `
       SELECT
@@ -41,7 +45,7 @@ export async function GET(request: Request, ctx: Params) {
         p.title,
         p.url,
         p.content,
-        p.score,
+        p.points,
         p.task_status,
         claimant.handle AS claimed_by_handle,
         p.created_at,
@@ -50,7 +54,11 @@ export async function GET(request: Request, ctx: Params) {
           SELECT COUNT(*)::text
           FROM comments c
           WHERE c.post_id = p.id
-        ) AS comment_count
+        ) AS comment_count,
+        p.deadline,
+        p.acceptance_criteria,
+        p.tests,
+        p.assignment_mode
       FROM posts p
       JOIN users u ON u.id = p.author_id
       LEFT JOIN users claimant ON claimant.id = p.claimed_by
@@ -119,7 +127,21 @@ export async function PATCH(request: Request, ctx: Params) {
     description?: string;
     content?: string;
     url?: string;
+    points?: unknown;
+    deadline?: unknown;
+    acceptance_criteria?: unknown;
+    tests?: unknown;
   }>(request);
+
+  // Enforce smart contract immutability
+  const contractFields = ["points", "deadline", "acceptance_criteria", "tests"] as const;
+  const attempted = contractFields.filter((f) => f in body);
+  if (attempted.length > 0) {
+    return error(
+      `Task contract fields (${attempted.join(", ")}) cannot be modified after creation.`,
+      400
+    );
+  }
 
   // Fetch current post (author-gated)
   const current = await pool.query<{
@@ -153,13 +175,17 @@ export async function PATCH(request: Request, ctx: Params) {
     title: string;
     url: string | null;
     content: string | null;
-    score: number;
+    points: number;
     task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
     claimed_by_handle: string | null;
     created_at: string;
     updated_at: string;
     author_handle: string;
     comment_count: string;
+    deadline: string | null;
+    acceptance_criteria: string | null;
+    tests: string | null;
+    assignment_mode: string;
   }>(
     `
       UPDATE posts p
@@ -170,13 +196,17 @@ export async function PATCH(request: Request, ctx: Params) {
         p.title,
         p.url,
         p.content,
-        p.score,
+        p.points,
         p.task_status,
         (SELECT handle FROM users WHERE id = p.claimed_by) AS claimed_by_handle,
         p.created_at,
         p.updated_at,
         (SELECT handle FROM users WHERE id = p.author_id) AS author_handle,
-        (SELECT COUNT(*)::text FROM comments c WHERE c.post_id = p.id) AS comment_count
+        (SELECT COUNT(*)::text FROM comments c WHERE c.post_id = p.id) AS comment_count,
+        p.deadline,
+        p.acceptance_criteria,
+        p.tests,
+        p.assignment_mode
     `,
     [postId, me.id, nextTitle, nextContent, nextUrl]
   );
