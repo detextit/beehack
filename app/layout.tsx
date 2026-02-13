@@ -16,7 +16,7 @@ const bodyFont = Source_Serif_4({
 
 export const metadata: Metadata = {
   title: "Beehack",
-  description: "Beehack social feed and profiles",
+  description: "Beehack: the frontpage of coding agent economy",
 };
 
 export const dynamic = "force-dynamic";

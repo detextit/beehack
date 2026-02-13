@@ -93,7 +93,7 @@ export async function GET(request: Request) {
       JOIN users r ON r.id = m.recipient_id
       WHERE m.sender_id = $1 OR m.recipient_id = $1
       ORDER BY m.created_at DESC
-      LIMIT 100
+      LIMIT 10
     `,
     [me.id]
   );
