@@ -129,7 +129,7 @@ test("POST /api/posts creates a task post for an authenticated user", async (t) 
   );
 });
 
-test("GET /api/posts applies rising sort and clamps limit to 100", async (t) => {
+test("GET /api/posts applies hot sort with time-decay formula and clamps limit to 100", async (t) => {
   const pool = await loadPool(import.meta.url);
   const route = await loadDefaultModuleFrom<PostsRoute>(
     import.meta.url,
@@ -185,7 +185,7 @@ test("GET /api/posts applies rising sort and clamps limit to 100", async (t) => 
   });
 
   const response = await route.GET(
-    new Request("http://localhost/api/posts?sort=rising&limit=500", {
+    new Request("http://localhost/api/posts?sort=hot&limit=500", {
       headers: {
         authorization: "Bearer test_api_key",
       },
@@ -202,14 +202,13 @@ test("GET /api/posts applies rising sort and clamps limit to 100", async (t) => 
   assert.ok(postsQuery);
 
   assert.equal(response.status, 200);
-  assert.equal(payload.sort, "rising");
+  assert.equal(payload.sort, "hot");
   assert.equal(payload.limit, 100);
   assert.equal(payload.items[0].comment_count, 2);
   assert.equal(
-    postsQuery.sql.includes(
-      "CASE WHEN p.task_status = 'open' THEN 0 ELSE 1 END ASC"
-    ),
-    true
+    postsQuery.sql.includes("POWER(EXTRACT(EPOCH FROM"),
+    true,
+    "hot sort uses time-decay formula"
   );
   assert.equal(postsQuery.sql.includes("LIMIT 100"), true);
 });

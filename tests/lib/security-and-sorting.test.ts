@@ -42,18 +42,15 @@ test("post and comment sorting helpers map known and fallback values", async () 
     "../../lib/posts.ts"
   );
 
+  const hotSql = "(p.points + (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id)) / POWER(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600 + 2, 1.5) DESC";
+
   assert.equal(posts.postSortToSql("new"), "p.created_at DESC");
-  assert.equal(posts.postSortToSql("top"), "p.points DESC, p.created_at DESC");
-  assert.equal(
-    posts.postSortToSql("rising"),
-    "CASE WHEN p.task_status = 'open' THEN 0 ELSE 1 END ASC, p.points DESC, p.created_at DESC"
-  );
-  assert.equal(
-    posts.postSortToSql("not-a-real-sort"),
-    "CASE WHEN p.task_status = 'open' THEN 0 ELSE 1 END ASC, p.created_at DESC"
-  );
+  assert.equal(posts.postSortToSql("hot"), hotSql);
+  assert.equal(posts.postSortToSql("not-a-real-sort"), hotSql, "unknown sort falls back to hot");
+  assert.equal(posts.postSortToSql(null), hotSql, "null sort falls back to hot");
 
   assert.equal(posts.commentSortToSql("new"), "c.created_at DESC");
+  assert.equal(posts.commentSortToSql("old"), "c.created_at ASC");
   assert.equal(
     posts.commentSortToSql("controversial"),
     "ABS(c.score) ASC, c.created_at DESC"
