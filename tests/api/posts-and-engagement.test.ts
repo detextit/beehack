@@ -68,9 +68,13 @@ test("POST /api/posts creates a task post for an authenticated user", async (t) 
     title: "Refactor auth middleware",
     url: "https://github.com/org/repo/issues/42",
     content: "Replace token parsing logic",
-    score: 0,
+    points: 50,
     task_status: "open" as const,
     created_at: "2026-02-12T12:00:00.000Z",
+    deadline: null,
+    acceptance_criteria: null,
+    tests: null,
+    assignment_mode: "owner_assigns",
   };
 
   const calls = installQueryMock(t, pool, ({ sql }) => {
@@ -80,7 +84,7 @@ test("POST /api/posts creates a task post for an authenticated user", async (t) 
 
     if (
       sql.includes(
-        "INSERT INTO posts (author_id, title, url, content, task_status)"
+        "INSERT INTO posts (author_id, title, url, content, points"
       )
     ) {
       return { rows: [createdPost], rowCount: 1 };
@@ -97,6 +101,7 @@ test("POST /api/posts creates a task post for an authenticated user", async (t) 
         title: "Refactor auth middleware",
         description: "Replace token parsing logic",
         url: "https://github.com/org/repo/issues/42",
+        points: 50,
       }),
     })
   );
@@ -117,7 +122,7 @@ test("POST /api/posts creates a task post for an authenticated user", async (t) 
   assert.equal(
     calls.some((call) =>
       call.sql.includes(
-        "INSERT INTO posts (author_id, title, url, content, task_status)"
+        "INSERT INTO posts (author_id, title, url, content, points"
       )
     ),
     true
@@ -144,24 +149,32 @@ test("GET /api/posts applies rising sort and clamps limit to 100", async (t) => 
             title: "First task",
             url: null,
             content: "first",
-            score: 5,
+            points: 5,
             task_status: "open",
             claimed_by_handle: null,
             created_at: "2026-02-12T10:00:00.000Z",
             author_handle: "alice",
             comment_count: "2",
+            deadline: null,
+            acceptance_criteria: null,
+            tests: null,
+            assignment_mode: "fcfs",
           },
           {
             id: "11",
             title: "Second task",
             url: null,
             content: "second",
-            score: 3,
+            points: 3,
             task_status: "claimed",
             claimed_by_handle: "bob",
             created_at: "2026-02-12T09:00:00.000Z",
             author_handle: "carol",
             comment_count: "0",
+            deadline: null,
+            acceptance_criteria: null,
+            tests: null,
+            assignment_mode: "owner_assigns",
           },
         ],
         rowCount: 2,
@@ -262,6 +275,7 @@ test("POST /api/posts/:id/claim returns 409 when already claimed by another user
             author_id: "post-author-1",
             task_status: "claimed",
             claimed_by: "user-2",
+            assignment_mode: "fcfs",
           },
         ],
         rowCount: 1,

@@ -43,10 +43,10 @@ test("post and comment sorting helpers map known and fallback values", async () 
   );
 
   assert.equal(posts.postSortToSql("new"), "p.created_at DESC");
-  assert.equal(posts.postSortToSql("top"), "p.score DESC, p.created_at DESC");
+  assert.equal(posts.postSortToSql("top"), "p.points DESC, p.created_at DESC");
   assert.equal(
     posts.postSortToSql("rising"),
-    "CASE WHEN p.task_status = 'open' THEN 0 ELSE 1 END ASC, p.score DESC, p.created_at DESC"
+    "CASE WHEN p.task_status = 'open' THEN 0 ELSE 1 END ASC, p.points DESC, p.created_at DESC"
   );
   assert.equal(
     posts.postSortToSql("not-a-real-sort"),
