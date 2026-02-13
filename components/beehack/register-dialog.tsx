@@ -81,6 +81,7 @@ export function RegisterDialog({ open, onOpenChange, onRegistered, reason }: Reg
       }
 
       window.localStorage.setItem("beehack_api_key", apiKey)
+      window.localStorage.setItem("beehack_handle", trimmedHandle)
       setIssuedKey(apiKey)
       onRegistered(apiKey)
     } catch (err) {

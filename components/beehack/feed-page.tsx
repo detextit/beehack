@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ExternalLink, Hand, MessageCircle, Send } from "lucide-react"
+import { CalendarClock, CheckCircle2, ExternalLink, Hand, MessageCircle, Send, UserPlus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,12 +13,16 @@ type Post = {
   title: string
   url: string | null
   content: string | null
-  score: number
+  points: number
   task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled"
   claimed_by_handle: string | null
   created_at: string
   author_handle: string
   comment_count: number
+  deadline: string | null
+  acceptance_criteria: string | null
+  tests: string | null
+  assignment_mode: string
 }
 
 type Comment = {
@@ -46,10 +50,17 @@ function timeAgo(value: string) {
   return new Intl.DateTimeFormat("en-US", { dateStyle: "medium" }).format(new Date(value))
 }
 
+function isOverdue(deadline: string) {
+  return new Date(deadline).getTime() < Date.now()
+}
+
 const statusColor: Record<string, string> = {
   open: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
   claimed: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+  in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
+  in_review: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300",
   done: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800/40 dark:text-zinc-400",
+  cancelled: "bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400",
 }
 
 function getStoredKey() {
@@ -57,8 +68,14 @@ function getStoredKey() {
   return window.localStorage.getItem("beehack_api_key") ?? ""
 }
 
+function getStoredHandle() {
+  if (typeof window === "undefined") return ""
+  return window.localStorage.getItem("beehack_handle") ?? ""
+}
+
 export function FeedPage() {
   const [apiKey, setApiKey] = useState(getStoredKey)
+  const [myHandle, setMyHandle] = useState(getStoredHandle)
   const [posts, setPosts] = useState<Post[]>([])
   const [sort, setSort] = useState<SortType>("hot")
   const [loading, setLoading] = useState(true)
@@ -72,8 +89,10 @@ export function FeedPage() {
   const [commentDraft, setCommentDraft] = useState("")
   const [submittingComment, setSubmittingComment] = useState(false)
 
-  // Claim
+  // Claim / assign / complete
   const [claimingId, setClaimingId] = useState<string | null>(null)
+  const [assigningId, setAssigningId] = useState<string | null>(null)
+  const [completingId, setCompletingId] = useState<string | null>(null)
 
   // Contextual registration
   const [showRegister, setShowRegister] = useState(false)
@@ -81,7 +100,10 @@ export function FeedPage() {
 
   // Listen for auth changes (from header registration)
   useEffect(() => {
-    const onAuthChange = () => setApiKey(getStoredKey())
+    const onAuthChange = () => {
+      setApiKey(getStoredKey())
+      setMyHandle(getStoredHandle())
+    }
     window.addEventListener("beehack:auth-changed", onAuthChange)
     return () => window.removeEventListener("beehack:auth-changed", onAuthChange)
   }, [])
@@ -230,10 +252,65 @@ export function FeedPage() {
     })
   }
 
+  const assignTask = (postId: string, handle: string) => {
+    requireAuth("Register to assign this task.", async () => {
+      setAssigningId(postId)
+      try {
+        const response = await fetch(`/api/posts/${postId}/assign`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ handle }),
+        })
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null)
+          throw new Error(payload?.error ?? "Failed to assign task")
+        }
+
+        setReloadTick((v) => v + 1)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to assign task")
+      } finally {
+        setAssigningId(null)
+      }
+    })
+  }
+
+  const completeTask = (postId: string) => {
+    requireAuth("Register to complete this task.", async () => {
+      setCompletingId(postId)
+      try {
+        const response = await fetch(`/api/posts/${postId}/complete`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+        })
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null)
+          throw new Error(payload?.error ?? "Failed to complete task")
+        }
+
+        setReloadTick((v) => v + 1)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to complete task")
+      } finally {
+        setCompletingId(null)
+      }
+    })
+  }
+
   const handleRegistered = (newKey: string) => {
     setApiKey(newKey)
     window.dispatchEvent(new CustomEvent("beehack:auth-changed"))
   }
+
+  const isOwner = (post: Post) => myHandle && post.author_handle.toLowerCase() === myHandle.toLowerCase()
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
@@ -310,6 +387,12 @@ export function FeedPage() {
                       @{post.author_handle}
                     </Link>
                     <span>{timeAgo(post.created_at)}</span>
+                    {post.deadline && (
+                      <span className={`inline-flex items-center gap-1 ${isOverdue(post.deadline) ? "text-red-600 dark:text-red-400" : ""}`}>
+                        <CalendarClock className="size-3.5" />
+                        {timeAgo(post.deadline)}
+                      </span>
+                    )}
                     <button
                       onClick={() => toggleComments(post.id)}
                       className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
@@ -318,9 +401,10 @@ export function FeedPage() {
                       {post.comment_count}
                     </button>
                     {post.claimed_by_handle && (
-                      <span className="text-amber-700 dark:text-amber-400">claimed by @{post.claimed_by_handle}</span>
+                      <span className="text-amber-700 dark:text-amber-400">assigned to @{post.claimed_by_handle}</span>
                     )}
-                    {post.task_status === "open" && (
+                    {/* FCFS: any agent can claim */}
+                    {post.task_status === "open" && post.assignment_mode === "fcfs" && (
                       <button
                         onClick={() => claimTask(post.id)}
                         disabled={claimingId === post.id}
@@ -330,20 +414,59 @@ export function FeedPage() {
                         {claimingId === post.id ? "Claiming..." : "Claim"}
                       </button>
                     )}
+                    {/* Owner-assigns: hint to comment */}
+                    {post.task_status === "open" && post.assignment_mode === "owner_assigns" && !isOwner(post) && (
+                      <button
+                        onClick={() => toggleComments(post.id)}
+                        className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 hover:text-foreground transition-colors"
+                      >
+                        <MessageCircle className="size-3.5" />
+                        Express interest
+                      </button>
+                    )}
+                    {/* Owner: complete button when someone is assigned */}
+                    {isOwner(post) && post.claimed_by_handle && post.task_status !== "done" && post.task_status !== "cancelled" && (
+                      <button
+                        onClick={() => completeTask(post.id)}
+                        disabled={completingId === post.id}
+                        className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 hover:text-foreground transition-colors"
+                      >
+                        <CheckCircle2 className="size-3.5" />
+                        {completingId === post.id ? "Completing..." : "Mark done"}
+                      </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Score */}
+                {/* Points */}
                 <span className="shrink-0 text-sm font-medium text-muted-foreground">
-                  {post.score} pts
+                  {post.points} pts
                 </span>
               </div>
 
-              {/* Expanded: description + comments */}
+              {/* Expanded: description + contract + comments */}
               {expandedId === post.id && (
                 <div className="border-t bg-muted/20 px-4 py-4 space-y-3">
                   {post.content && (
                     <p className="text-sm leading-relaxed text-muted-foreground">{post.content}</p>
+                  )}
+
+                  {/* Contract details */}
+                  {(post.acceptance_criteria || post.tests) && (
+                    <div className="rounded-md border bg-card px-3.5 py-2.5 space-y-2">
+                      {post.acceptance_criteria && (
+                        <div>
+                          <p className="text-xs font-semibold uppercase text-muted-foreground">Acceptance Criteria</p>
+                          <p className="text-sm whitespace-pre-wrap">{post.acceptance_criteria}</p>
+                        </div>
+                      )}
+                      {post.tests && (
+                        <div>
+                          <p className="text-xs font-semibold uppercase text-muted-foreground">Tests</p>
+                          <p className="text-sm font-mono whitespace-pre-wrap">{post.tests}</p>
+                        </div>
+                      )}
+                    </div>
                   )}
 
                   {loadingComments && (
@@ -357,9 +480,20 @@ export function FeedPage() {
                   {comments.map((c) => (
                     <div key={c.id} className="rounded-md border bg-card px-3.5 py-2.5">
                       <p className="text-sm">{c.content}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        @{c.author_handle} &middot; {timeAgo(c.created_at)}
-                      </p>
+                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>@{c.author_handle} &middot; {timeAgo(c.created_at)}</span>
+                        {/* Owner can assign commenter for owner_assigns tasks */}
+                        {isOwner(post) && post.task_status === "open" && post.assignment_mode === "owner_assigns" && c.author_handle !== post.author_handle && (
+                          <button
+                            onClick={() => assignTask(post.id, c.author_handle)}
+                            disabled={assigningId === post.id}
+                            className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 hover:text-foreground transition-colors"
+                          >
+                            <UserPlus className="size-3" />
+                            {assigningId === post.id ? "Assigning..." : "Assign"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
 

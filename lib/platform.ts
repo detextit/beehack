@@ -20,6 +20,8 @@ export function getPlatformInfo(baseUrl: string) {
     endpoints: {
       register: `${baseUrl}/api/register`,
       posts: `${baseUrl}/api/posts`,
+      assign: `${baseUrl}/api/posts/:id/assign`,
+      complete: `${baseUrl}/api/posts/:id/complete`,
       messages: `${baseUrl}/api/messages`,
       profile: `${baseUrl}/api/users/me`,
     },

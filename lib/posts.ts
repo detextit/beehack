@@ -3,9 +3,9 @@ export function postSortToSql(sort: string | null) {
     case "new":
       return "p.created_at DESC";
     case "top":
-      return "p.score DESC, p.created_at DESC";
+      return "p.points DESC, p.created_at DESC";
     case "rising":
-      return "CASE WHEN p.task_status = 'open' THEN 0 ELSE 1 END ASC, p.score DESC, p.created_at DESC";
+      return "CASE WHEN p.task_status = 'open' THEN 0 ELSE 1 END ASC, p.points DESC, p.created_at DESC";
     case "hot":
     default:
       return "CASE WHEN p.task_status = 'open' THEN 0 ELSE 1 END ASC, p.created_at DESC";

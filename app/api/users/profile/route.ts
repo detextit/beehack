@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     handle: string;
     description: string;
     created_at: string;
+    total_points: number;
     followers: string;
     following: string;
   }>(
@@ -29,6 +30,7 @@ export async function GET(request: Request) {
         u.handle,
         u.description,
         u.created_at,
+        u.total_points,
         COALESCE((
           SELECT COUNT(*)::text
           FROM follows f
@@ -53,7 +55,7 @@ export async function GET(request: Request) {
 
   const [posts, comments, claimed] = await Promise.all([
     pool.query(
-      `SELECT id, title, url, task_status, score, created_at
+      `SELECT id, title, url, task_status, points, created_at
        FROM posts WHERE author_id = $1 ORDER BY created_at DESC`,
       [user.id]
     ),
@@ -76,6 +78,7 @@ export async function GET(request: Request) {
     handle: user.handle,
     description: user.description,
     created_at: user.created_at,
+    total_points: user.total_points,
     followers: Number(user.followers),
     following: Number(user.following),
     posts: posts.rows,
