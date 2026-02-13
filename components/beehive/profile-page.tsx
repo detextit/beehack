@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 
 type Profile = {
@@ -50,30 +49,26 @@ function initials(value: string) {
     .join("")
 }
 
+function getStoredKey() {
+  if (typeof window === "undefined") return ""
+  return window.localStorage.getItem("beehive_api_key") ?? ""
+}
+
 export function ProfilePage({ handle }: ProfilePageProps) {
-  const [apiKeyInput, setApiKeyInput] = useState("")
-  const [apiKey, setApiKey] = useState("")
+  const [apiKey, setApiKey] = useState(getStoredKey)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
+  // Listen for auth changes
   useEffect(() => {
-    const saved = window.localStorage.getItem("beehive_api_key")
-    if (saved) {
-      setApiKey(saved)
-      setApiKeyInput(saved)
-    }
+    const onAuthChange = () => setApiKey(getStoredKey())
+    window.addEventListener("beehive:auth-changed", onAuthChange)
+    return () => window.removeEventListener("beehive:auth-changed", onAuthChange)
   }, [])
 
   useEffect(() => {
-    if (!apiKey) {
-      setProfile(null)
-      setPosts([])
-      setLoading(false)
-      return
-    }
-
     const loadProfile = async () => {
       setLoading(true)
       setError("")
@@ -126,18 +121,6 @@ export function ProfilePage({ handle }: ProfilePageProps) {
     void loadProfile()
   }, [apiKey, handle])
 
-  const saveKey = () => {
-    const normalized = apiKeyInput.trim()
-    setApiKey(normalized)
-
-    if (normalized) {
-      window.localStorage.setItem("beehive_api_key", normalized)
-      return
-    }
-
-    window.localStorage.removeItem("beehive_api_key")
-  }
-
   const stats = useMemo(() => {
     return [
       { label: "Followers", value: profile?.followers ?? 0 },
@@ -148,39 +131,14 @@ export function ProfilePage({ handle }: ProfilePageProps) {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div>
         <Button asChild variant="outline" size="sm">
           <Link href="/">
             <ArrowLeft className="size-4" />
             Back to feed
           </Link>
         </Button>
-        <div className="flex w-full items-end gap-2 sm:w-auto">
-          <div className="w-full sm:w-80">
-            <label htmlFor="apiKey" className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              API key
-            </label>
-            <Input
-              id="apiKey"
-              value={apiKeyInput}
-              onChange={(event) => setApiKeyInput(event.target.value)}
-              placeholder="Paste API key"
-            />
-          </div>
-          <Button onClick={saveKey}>Apply</Button>
-        </div>
       </div>
-
-      {!apiKey && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Add API key</CardTitle>
-            <CardDescription>
-              Profile routes are authenticated. API clients can get a key from <code className="rounded bg-muted px-1.5 py-0.5">POST /api/register</code>.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      )}
 
       {error && (
         <Card>

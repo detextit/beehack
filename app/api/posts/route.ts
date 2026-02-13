@@ -74,11 +74,6 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   await ensureDbReady();
 
-  const me = await requireAuth(request);
-  if (!me) {
-    return error("Unauthorized.", 401);
-  }
-
   const { searchParams } = new URL(request.url);
   const sort = searchParams.get("sort");
   const limit = Math.min(

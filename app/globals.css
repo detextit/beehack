@@ -47,39 +47,90 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* ─── Light: Claude palette ───
+   Crail   #C15F3C  → primary
+   Cloudy  #B1ADA1  → muted tones
+   Pampas  #F4F3EE  → background / card
+   White   #FFFFFF  → popover / card
+*/
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.97 0.014 67.3);
-  --foreground: oklch(0.23 0.02 34.1);
-  --card: oklch(0.99 0.007 79.2 / 97%);
-  --card-foreground: oklch(0.23 0.02 34.1);
-  --popover: oklch(0.99 0.007 79.2);
-  --popover-foreground: oklch(0.23 0.02 34.1);
-  --primary: oklch(0.53 0.15 37.2);
-  --primary-foreground: oklch(0.98 0.005 80);
-  --secondary: oklch(0.93 0.02 70);
-  --secondary-foreground: oklch(0.25 0.03 36);
-  --muted: oklch(0.95 0.01 72);
-  --muted-foreground: oklch(0.46 0.03 43);
-  --accent: oklch(0.89 0.05 85);
-  --accent-foreground: oklch(0.28 0.04 28);
-  --destructive: oklch(0.56 0.21 27.1);
-  --border: oklch(0.86 0.02 73);
-  --input: oklch(0.86 0.02 73);
-  --ring: oklch(0.64 0.16 35);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Pampas off-white background */
+  --background: #F4F3EE;
+  --foreground: #2D2825;
+  /* White cards */
+  --card: #FFFFFF;
+  --card-foreground: #2D2825;
+  --popover: #FFFFFF;
+  --popover-foreground: #2D2825;
+  /* Crail primary */
+  --primary: #C15F3C;
+  --primary-foreground: #FFFFFF;
+  /* Cloudy-based secondary */
+  --secondary: #E8E6E1;
+  --secondary-foreground: #3D3733;
+  /* Cloudy muted */
+  --muted: #ECEAE5;
+  --muted-foreground: #8A847B;
+  /* Warm accent */
+  --accent: #E8E6E1;
+  --accent-foreground: #3D3733;
+  --destructive: #D44030;
+  /* Borders from Cloudy */
+  --border: #DDD9D2;
+  --input: #DDD9D2;
+  --ring: #C15F3C;
+  /* Charts */
+  --chart-1: #C15F3C;
+  --chart-2: #6B9080;
+  --chart-3: #5B7BA5;
+  --chart-4: #D4A054;
+  --chart-5: #9B7EBD;
+  /* Sidebar */
+  --sidebar: #F4F3EE;
+  --sidebar-foreground: #2D2825;
+  --sidebar-primary: #C15F3C;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E8E6E1;
+  --sidebar-accent-foreground: #3D3733;
+  --sidebar-border: #DDD9D2;
+  --sidebar-ring: #C15F3C;
+}
+
+/* ─── Dark: warm dark palette derived from Claude ─── */
+.dark {
+  --background: #1C1917;
+  --foreground: #EDE9E3;
+  --card: #241F1C;
+  --card-foreground: #EDE9E3;
+  --popover: #241F1C;
+  --popover-foreground: #EDE9E3;
+  /* Lighter Crail for dark contrast */
+  --primary: #D4795A;
+  --primary-foreground: #1C1917;
+  --secondary: #302A26;
+  --secondary-foreground: #D5CFC6;
+  --muted: #302A26;
+  --muted-foreground: #9B938A;
+  --accent: #362F2A;
+  --accent-foreground: #D5CFC6;
+  --destructive: #E05545;
+  --border: #3A3330;
+  --input: #3A3330;
+  --ring: #D4795A;
+  --chart-1: #D4795A;
+  --chart-2: #7DB5A0;
+  --chart-3: #7B9BC5;
+  --chart-4: #E4B064;
+  --chart-5: #B09ECD;
+  --sidebar: #1C1917;
+  --sidebar-foreground: #EDE9E3;
+  --sidebar-primary: #D4795A;
+  --sidebar-primary-foreground: #1C1917;
+  --sidebar-accent: #302A26;
+  --sidebar-accent-foreground: #D5CFC6;
+  --sidebar-border: #3A3330;
+  --sidebar-ring: #D4795A;
 }
 
 @layer base {
@@ -88,10 +139,9 @@
   }
   body {
     @apply bg-background text-foreground min-h-screen;
-    background-image:
-      radial-gradient(circle at 10% 15%, color-mix(in oklch, var(--accent) 35%, transparent) 0%, transparent 34%),
-      radial-gradient(circle at 90% 85%, color-mix(in oklch, var(--primary) 28%, transparent) 0%, transparent 36%);
     font-family: var(--font-body), serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
   }
   h1,
   h2,
@@ -105,14 +155,5 @@
 @layer utilities {
   .border-ink {
     border-color: color-mix(in oklch, var(--foreground) 20%, transparent);
-  }
-
-  .sunrise-panel {
-    background: linear-gradient(
-      140deg,
-      color-mix(in oklch, var(--card) 88%, white) 0%,
-      color-mix(in oklch, var(--accent) 18%, var(--card)) 55%,
-      color-mix(in oklch, var(--primary) 12%, var(--card)) 100%
-    );
   }
 }

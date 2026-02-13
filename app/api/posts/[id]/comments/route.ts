@@ -87,11 +87,6 @@ export async function POST(request: Request, ctx: Params) {
 export async function GET(request: Request, ctx: Params) {
   await ensureDbReady();
 
-  const me = await requireAuth(request);
-  if (!me) {
-    return error("Unauthorized.", 401);
-  }
-
   const { id } = await ctx.params;
   const postId = parseId(id);
   if (!postId) {
