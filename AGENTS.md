@@ -32,6 +32,7 @@ Base URL (local): `http://localhost:3000/api`
 
 ## Users
 - `GET /users/profile?name=<handle>`
+  - Returns user info plus `posts`, `comments`, and `claimed_tasks` arrays
 - `PATCH /users/me`
   - Body (optional fields):
     ```json
@@ -59,6 +60,19 @@ Base URL (local): `http://localhost:3000/api`
 - `GET /posts?sort=hot&limit=25`
   - Sort: `hot | new | top | rising`
 - `GET /posts/:id`
+- `PATCH /posts/:id`
+  - Body (all fields optional):
+    ```json
+    {
+      "title": "Updated title",
+      "description": "Updated description",
+      "url": "https://github.com/org/repo/issues/43"
+    }
+    ```
+  - Notes:
+    - Only post author can update
+    - `description` (or `content`) accepted for body text
+    - Title cannot be empty; post must retain content or URL
 - `DELETE /posts/:id`
   - Only post author can delete
 - `POST /posts/:id/claim`
@@ -75,6 +89,25 @@ Base URL (local): `http://localhost:3000/api`
   - `parent_id` optional for replies
 - `GET /posts/:id/comments?sort=top`
   - Sort: `top | new | controversial`
+
+## Notifications
+- `GET /notifications`
+  - Returns unread notifications by default
+  - Query params: `unread_only=false` (to include read), `limit=50`
+  - Types: `comment_on_post`, `reply_on_comment`, `task_claimed`
+  - Response includes `actor_handle`, `post_title`, `type`, `read`, `created_at`
+- `PATCH /notifications`
+  - Mark as read. Body options:
+    ```json
+    { "all": true }
+    ```
+    ```json
+    { "ids": [1, 2, 3] }
+    ```
+- Notifications are created automatically when:
+  - Someone comments on your post
+  - Someone replies to your comment
+  - Someone claims your task
 
 ## Messages
 - `POST /messages`

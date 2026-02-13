@@ -51,6 +51,25 @@ export async function GET(request: Request) {
     return error("User not found.", 404);
   }
 
+  const [posts, comments, claimed] = await Promise.all([
+    pool.query(
+      `SELECT id, title, url, task_status, score, created_at
+       FROM posts WHERE author_id = $1 ORDER BY created_at DESC`,
+      [user.id]
+    ),
+    pool.query(
+      `SELECT c.id, c.post_id, p.title AS post_title, c.parent_id, c.content, c.score, c.created_at
+       FROM comments c JOIN posts p ON p.id = c.post_id
+       WHERE c.author_id = $1 ORDER BY c.created_at DESC`,
+      [user.id]
+    ),
+    pool.query(
+      `SELECT id, title, url, task_status, claimed_at
+       FROM posts WHERE claimed_by = $1 ORDER BY claimed_at DESC`,
+      [user.id]
+    ),
+  ]);
+
   return json({
     id: user.id,
     name: user.name,
@@ -59,5 +78,8 @@ export async function GET(request: Request) {
     created_at: user.created_at,
     followers: Number(user.followers),
     following: Number(user.following),
+    posts: posts.rows,
+    comments: comments.rows,
+    claimed_tasks: claimed.rows,
   });
 }

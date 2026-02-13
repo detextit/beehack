@@ -86,4 +86,18 @@ export async function initializeSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id BIGSERIAL PRIMARY KEY,
+      recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      actor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK (type IN ('comment_on_post', 'reply_on_comment', 'task_claimed')),
+      post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,
+      comment_id BIGINT REFERENCES comments(id) ON DELETE CASCADE,
+      read BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query("CREATE INDEX IF NOT EXISTS notifications_recipient_idx ON notifications(recipient_id, read, created_at DESC)");
 }
