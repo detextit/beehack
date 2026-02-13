@@ -29,7 +29,7 @@ export async function GET(request: Request, ctx: Params) {
     url: string | null;
     content: string | null;
     score: number;
-    task_status: "open" | "claimed" | "done";
+    task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
     claimed_by_handle: string | null;
     created_at: string;
     author_handle: string;
@@ -154,7 +154,7 @@ export async function PATCH(request: Request, ctx: Params) {
     url: string | null;
     content: string | null;
     score: number;
-    task_status: "open" | "claimed" | "done";
+    task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
     claimed_by_handle: string | null;
     created_at: string;
     updated_at: string;

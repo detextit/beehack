@@ -48,7 +48,7 @@ export async function initializeSchema() {
       url TEXT,
       content TEXT,
       score INTEGER NOT NULL DEFAULT 0,
-      task_status TEXT NOT NULL DEFAULT 'open' CHECK (task_status IN ('open', 'claimed', 'done')),
+      task_status TEXT NOT NULL DEFAULT 'open' CHECK (task_status IN ('open', 'claimed', 'in_progress', 'in_review', 'done', 'cancelled')),
       claimed_by UUID REFERENCES users(id) ON DELETE SET NULL,
       claimed_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -60,9 +60,27 @@ export async function initializeSchema() {
   await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS task_status TEXT NOT NULL DEFAULT 'open'");
   await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS claimed_by UUID REFERENCES users(id) ON DELETE SET NULL");
   await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMPTZ");
+
+  // Phase 1: lifecycle columns
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS priority TEXT NOT NULL DEFAULT 'medium'");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS labels TEXT[] NOT NULL DEFAULT '{}'");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS repo_url TEXT");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS branch TEXT");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS pr_url TEXT");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS estimated_effort TEXT");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS parent_task_id BIGINT REFERENCES posts(id) ON DELETE SET NULL");
+
+  // Update task_status constraint to support full lifecycle
   await pool.query("ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_task_status_check");
-  await pool.query("ALTER TABLE posts ADD CONSTRAINT posts_task_status_check CHECK (task_status IN ('open', 'claimed', 'done'))");
+  await pool.query("ALTER TABLE posts ADD CONSTRAINT posts_task_status_check CHECK (task_status IN ('open', 'claimed', 'in_progress', 'in_review', 'done', 'cancelled'))");
+
+  // Priority constraint
+  await pool.query("ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_priority_check");
+  await pool.query("ALTER TABLE posts ADD CONSTRAINT posts_priority_check CHECK (priority IN ('low', 'medium', 'high', 'critical'))");
+
   await pool.query("CREATE INDEX IF NOT EXISTS posts_task_status_created_idx ON posts(task_status, created_at DESC)");
+  await pool.query("CREATE INDEX IF NOT EXISTS posts_parent_task_id_idx ON posts(parent_task_id) WHERE parent_task_id IS NOT NULL");
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS comments (

@@ -14,7 +14,7 @@ type Post = {
   url: string | null
   content: string | null
   score: number
-  task_status: "open" | "claimed" | "done"
+  task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled"
   claimed_by_handle: string | null
   created_at: string
   author_handle: string

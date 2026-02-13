@@ -23,7 +23,7 @@ type Profile = {
 type Post = {
   id: string
   title: string
-  task_status: "open" | "claimed" | "done"
+  task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled"
   claimed_by_handle: string | null
   score: number
   comment_count: number
