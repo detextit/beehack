@@ -75,10 +75,10 @@ export function SiteHeader() {
                 Feed
               </Link>
               <Link
-                href="/tasks"
+                href="/about"
                 className="rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
-                Board
+                About
               </Link>
             </nav>
           </div>

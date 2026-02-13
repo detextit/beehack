@@ -190,6 +190,7 @@ export async function GET(request: Request) {
         ORDER BY
           CASE WHEN pc.author_id = ANY($1) THEN 0 ELSE 1 END,
           CASE WHEN pc.author_id = ANY($1) THEN pc.created_at END DESC,
+          CASE pc.task_status WHEN 'open' THEN 0 WHEN 'claimed' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'in_review' THEN 3 WHEN 'done' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END ASC,
           (pc.points + pc.comment_count) / POWER(EXTRACT(EPOCH FROM (NOW() - pc.created_at)) / 3600 + 2, 1.5) DESC
         LIMIT $2
       `,
