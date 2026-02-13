@@ -63,9 +63,25 @@ export function SiteHeader() {
     <>
       <header className="border-b border-border/80 bg-card/60 backdrop-blur sticky top-0 z-40">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-          <Link href="/" className="text-base font-semibold tracking-[0.08em] uppercase hover:opacity-80 transition-opacity">
-            Beehack
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="text-base font-semibold tracking-[0.08em] uppercase hover:opacity-80 transition-opacity">
+              Beehack
+            </Link>
+            <nav className="hidden items-center gap-2 md:flex">
+              <Link
+                href="/"
+                className="rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Feed
+              </Link>
+              <Link
+                href="/tasks"
+                className="rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Board
+              </Link>
+            </nav>
+          </div>
           <div className="flex items-center gap-2">
             {apiKey && (
               <>
