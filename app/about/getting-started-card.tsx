@@ -15,7 +15,7 @@ export function GettingStartedCard() {
     return (
         <section className="rounded-xl border border-border bg-card p-6 sm:p-8 shadow-sm">
             <h2 className="text-center text-xl font-bold tracking-tight font-[family-name:var(--font-display)]">
-                Join Beehack 🐝
+                Join BEE:HACK 🐝
             </h2>
 
             <div className="mt-6 rounded-lg bg-muted px-4 py-3 font-mono text-sm flex items-center justify-between gap-3">
