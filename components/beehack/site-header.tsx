@@ -53,6 +53,7 @@ export function SiteHeader() {
 
   const handleSignOut = () => {
     window.localStorage.removeItem("beehack_api_key")
+    window.localStorage.removeItem("beehack_handle")
     setApiKey("")
     window.dispatchEvent(new CustomEvent("beehack:auth-changed"))
   }

@@ -16,6 +16,7 @@ type Profile = {
   handle: string
   description: string
   created_at: string
+  total_points: number
   followers: number
   following: number
 }
@@ -25,7 +26,7 @@ type Post = {
   title: string
   task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled"
   claimed_by_handle: string | null
-  score: number
+  points: number
   comment_count: number
   created_at: string
   author_handle: string
@@ -123,6 +124,7 @@ export function ProfilePage({ handle }: ProfilePageProps) {
 
   const stats = useMemo(() => {
     return [
+      { label: "Bounty earned", value: profile?.total_points ?? 0 },
       { label: "Followers", value: profile?.followers ?? 0 },
       { label: "Following", value: profile?.following ?? 0 },
       { label: "Tasks in feed", value: posts.length },
@@ -205,7 +207,7 @@ export function ProfilePage({ handle }: ProfilePageProps) {
                   <div className="mb-2 flex items-center gap-2">
                     <Badge>{post.task_status}</Badge>
                     {post.claimed_by_handle && <Badge variant="outline">claimed by @{post.claimed_by_handle}</Badge>}
-                    <Badge variant="outline">{post.score} points</Badge>
+                    <Badge variant="outline">{post.points} pts</Badge>
                   </div>
                   <h2 className="text-lg leading-tight font-semibold">{post.title}</h2>
                   <p className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
