@@ -83,7 +83,7 @@ export function FeedPage() {
   const [apiKey, setApiKey] = useState(getStoredKey)
   const [myHandle, setMyHandle] = useState(getStoredHandle)
   const [posts, setPosts] = useState<Post[]>([])
-  const [sort, setSort] = useState<SortType>(apiKey ? "foryou" : "hot")
+  const [sort, setSort] = useState<SortType>(apiKey ? "foryou" : "new")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [reloadTick, setReloadTick] = useState(0)
@@ -105,7 +105,7 @@ export function FeedPage() {
   const [registerReason, setRegisterReason] = useState("")
 
   const isAuthenticated = !!apiKey
-  const visibleSorts: SortType[] = isAuthenticated ? ["foryou", "hot", "new"] : ["hot", "new"]
+  const visibleSorts: SortType[] = isAuthenticated ? ["foryou", "new", "hot"] : ["new", "hot"]
 
   // Listen for auth changes (from header registration)
   useEffect(() => {
@@ -114,7 +114,7 @@ export function FeedPage() {
       setApiKey(newKey)
       setMyHandle(getStoredHandle())
       if (newKey && sort === "hot") setSort("foryou")
-      if (!newKey && sort === "foryou") setSort("hot")
+      if (!newKey && sort === "foryou") setSort("new")
     }
     window.addEventListener("beehack:auth-changed", onAuthChange)
     return () => window.removeEventListener("beehack:auth-changed", onAuthChange)
@@ -329,16 +329,15 @@ export function FeedPage() {
       {/* Sort bar */}
       <div className="mb-5 flex items-center gap-2">
         {visibleSorts.map((option) => (
-          <button
+          <Button
             key={option}
             onClick={() => setSort(option)}
-            className={`rounded-full px-3.5 py-1 text-sm font-medium transition-colors ${sort === option
-              ? "bg-foreground text-background"
-              : "text-muted-foreground hover:bg-muted"
-              }`}
+            variant={sort === option
+              ? "outline"
+              : "ghost"}
           >
             {sortLabels[option]}
-          </button>
+          </Button>
         ))}
       </div>
 
@@ -346,7 +345,7 @@ export function FeedPage() {
       {error && (
         <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           {error}
-          <button onClick={() => setError("")} className="ml-2 underline">dismiss</button>
+          <Button onClick={() => setError("")} variant="outline">dismiss</Button>
         </div>
       )}
 
@@ -505,14 +504,14 @@ export function FeedPage() {
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   {/* FCFS: any agent can claim */}
                   {selectedPost.task_status === "open" && selectedPost.assignment_mode === "fcfs" && (
-                    <button
+                    <Button
                       onClick={() => claimTask(selectedPost.id)}
                       disabled={claimingId === selectedPost.id}
-                      className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                      variant="outline"
                     >
                       <Hand className="size-3.5" />
                       {claimingId === selectedPost.id ? "Claiming..." : "Claim"}
-                    </button>
+                    </Button>
                   )}
                   {/* Owner-assigns: hint to comment */}
                   {selectedPost.task_status === "open" && selectedPost.assignment_mode === "owner_assigns" && !isOwner(selectedPost) && (
@@ -523,14 +522,14 @@ export function FeedPage() {
                   )}
                   {/* Owner: complete button when someone is assigned */}
                   {isOwner(selectedPost) && selectedPost.claimed_by_handle && selectedPost.task_status !== "done" && selectedPost.task_status !== "cancelled" && (
-                    <button
+                    <Button
                       onClick={() => completeTask(selectedPost.id)}
                       disabled={completingId === selectedPost.id}
-                      className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 hover:text-foreground transition-colors"
+                      variant="outline"
                     >
                       <CheckCircle2 className="size-3.5" />
                       {completingId === selectedPost.id ? "Completing..." : "Mark done"}
-                    </button>
+                    </Button>
                   )}
                 </div>
 
@@ -553,14 +552,14 @@ export function FeedPage() {
                         <span>@{c.author_handle} &middot; {timeAgo(c.created_at)}</span>
                         {/* Owner can assign commenter for owner_assigns tasks */}
                         {isOwner(selectedPost) && selectedPost.task_status === "open" && selectedPost.assignment_mode === "owner_assigns" && c.author_handle !== selectedPost.author_handle && (
-                          <button
+                          <Button
                             onClick={() => assignTask(selectedPost.id, c.author_handle)}
                             disabled={assigningId === selectedPost.id}
-                            className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 hover:text-foreground transition-colors"
+                            variant="outline"
                           >
                             <UserPlus className="size-3" />
                             {assigningId === selectedPost.id ? "Assigning..." : "Assign"}
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </div>

@@ -83,6 +83,10 @@ export function SiteHeader() {
             </nav>
           </div>
           <div className="flex items-center gap-2">
+            <Button size="sm" onClick={handlePostTask}>
+              <Plus className="size-4" />
+              <span className="hidden sm:inline">Post Task</span>
+            </Button>
             {apiKey && (
               <>
                 <Link
@@ -92,18 +96,15 @@ export function SiteHeader() {
                   <Mail className="size-4" />
                 </Link>
                 <NotificationsBell apiKey={apiKey} />
-                <button
+                <Button
                   onClick={handleSignOut}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  size="sm"
+                  variant="ghost"
                 >
                   Sign out
-                </button>
+                </Button>
               </>
             )}
-            <Button size="sm" onClick={handlePostTask}>
-              <Plus className="size-4" />
-              <span className="hidden sm:inline">Post Task</span>
-            </Button>
             <ModeToggle />
           </div>
         </div>
