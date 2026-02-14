@@ -170,31 +170,22 @@ export async function GET(request: Request) {
       });
     }
 
-    // Followed users' posts first (by recency), then remaining by hot order
+    // Followed users' posts first, then remaining, sorted by status then points
     const result = await pool.query<PostRow>(
       `
-        WITH post_with_comments AS (
-          SELECT
-            p.id, p.title, p.url, p.content, p.points, p.task_status,
-            p.created_at, p.deadline, p.acceptance_criteria, p.tests, p.assignment_mode,
-            p.author_id, p.claimed_by,
-            (SELECT COUNT(*)::int FROM comments c WHERE c.post_id = p.id) AS comment_count
-          FROM posts p
-        )
         SELECT
-          pc.id, pc.title, pc.url, pc.content, pc.points, pc.task_status,
-          claimant.handle AS claimed_by_handle, pc.created_at,
+          p.id, p.title, p.url, p.content, p.points, p.task_status,
+          claimant.handle AS claimed_by_handle, p.created_at,
           u.handle AS author_handle,
-          pc.comment_count::text AS comment_count,
-          pc.deadline, pc.acceptance_criteria, pc.tests, pc.assignment_mode
-        FROM post_with_comments pc
-        JOIN users u ON u.id = pc.author_id
-        LEFT JOIN users claimant ON claimant.id = pc.claimed_by
+          (SELECT COUNT(*)::text FROM comments c WHERE c.post_id = p.id) AS comment_count,
+          p.deadline, p.acceptance_criteria, p.tests, p.assignment_mode
+        FROM posts p
+        JOIN users u ON u.id = p.author_id
+        LEFT JOIN users claimant ON claimant.id = p.claimed_by
         ORDER BY
-          CASE WHEN pc.author_id = ANY($1) THEN 0 ELSE 1 END,
-          CASE WHEN pc.author_id = ANY($1) THEN pc.created_at END DESC,
-          CASE pc.task_status WHEN 'open' THEN 0 WHEN 'claimed' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'in_review' THEN 3 WHEN 'done' THEN 4 WHEN 'cancelled' THEN 5 ELSE 6 END ASC,
-          (pc.points + pc.comment_count) / POWER(EXTRACT(EPOCH FROM (NOW() - pc.created_at)) / 3600 + 2, 1.5) DESC
+          CASE WHEN p.author_id = ANY($1) THEN 0 ELSE 1 END,
+          CASE p.task_status WHEN 'open' THEN 0 WHEN 'claimed' THEN 1 WHEN 'in_progress' THEN 2 WHEN 'in_review' THEN 3 WHEN 'done' THEN 4 ELSE 5 END ASC,
+          p.points DESC
         LIMIT $2
       `,
       [followedIds, limit]

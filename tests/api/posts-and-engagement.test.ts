@@ -129,7 +129,7 @@ test("POST /api/posts creates a task post for an authenticated user", async (t) 
   );
 });
 
-test("GET /api/posts applies hot sort with time-decay formula and clamps limit to 100", async (t) => {
+test("GET /api/posts filters open tasks, sorts by points, and clamps limit to 100", async (t) => {
   const pool = await loadPool(import.meta.url);
   const route = await loadDefaultModuleFrom<PostsRoute>(
     import.meta.url,
@@ -206,9 +206,14 @@ test("GET /api/posts applies hot sort with time-decay formula and clamps limit t
   assert.equal(payload.limit, 100);
   assert.equal(payload.items[0].comment_count, 2);
   assert.equal(
-    postsQuery.sql.includes("POWER(EXTRACT(EPOCH FROM"),
+    postsQuery.sql.includes("CASE p.task_status"),
     true,
-    "hot sort uses time-decay formula"
+    "hot sort orders by status first"
+  );
+  assert.equal(
+    postsQuery.sql.includes("p.points DESC"),
+    true,
+    "hot sort then orders by points"
   );
   assert.equal(postsQuery.sql.includes("LIMIT 100"), true);
 });
@@ -419,7 +424,7 @@ test("GET /api/posts with 'foryou' sort shows followed users' posts first", asyn
       };
     }
 
-    if (sql.includes("WITH post_with_comments")) {
+    if (sql.includes("CASE WHEN p.author_id = ANY")) {
       return {
         rows: [
           {
@@ -475,20 +480,20 @@ test("GET /api/posts with 'foryou' sort shows followed users' posts first", asyn
     items: Array<{ id: string; title: string }>;
   };
 
-  const forYouQuery = calls.find((call) => call.sql.includes("WITH post_with_comments"));
-  assert.ok(forYouQuery, "should use CTE for foryou sort");
+  const forYouQuery = calls.find((call) => call.sql.includes("CASE WHEN p.author_id = ANY"));
+  assert.ok(forYouQuery, "should use followed-first ordering for foryou sort");
 
   assert.equal(response.status, 200);
   assert.equal(payload.sort, "foryou");
   assert.equal(
-    forYouQuery.sql.includes("CASE WHEN pc.author_id = ANY($1)"),
+    forYouQuery.sql.includes("CASE p.task_status"),
     true,
-    "should prioritize followed users' posts"
+    "should sort by status"
   );
   assert.equal(
-    forYouQuery.sql.includes("pc.comment_count"),
+    forYouQuery.sql.includes("p.points DESC"),
     true,
-    "should use CTE comment_count to avoid duplicate subquery"
+    "should sort by points"
   );
 });
 
@@ -555,8 +560,13 @@ test("GET /api/posts with 'foryou' sort falls back to hot when user follows nobo
   assert.equal(payload.sort, "foryou");
   assert.equal(payload.items.length, 1);
   assert.equal(
-    postsQuery.sql.includes("comment_count::int"),
+    postsQuery.sql.includes("CASE p.task_status"),
     true,
-    "should use integer comment count for hot sort calculation"
+    "should sort by status first"
+  );
+  assert.equal(
+    postsQuery.sql.includes("p.points DESC"),
+    true,
+    "should sort by points for hot sort fallback"
   );
 });

@@ -106,7 +106,7 @@ export function FeedPage() {
   const [registerReason, setRegisterReason] = useState("")
 
   const isAuthenticated = !!apiKey
-  const visibleSorts: SortType[] = isAuthenticated ? ["foryou", "new", "hot"] : ["new", "hot"]
+  const visibleSorts: SortType[] = isAuthenticated ? ["new", "hot", "foryou"] : ["new", "hot"]
 
   // Listen for auth changes (from header registration)
   useEffect(() => {
