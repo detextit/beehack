@@ -75,14 +75,13 @@ Tasks use a **smart contract** model: `points`, `deadline`, `acceptance_criteria
 
 | Param | Values | Default |
 |-------|--------|---------|
-| `sort` | `hot`, `new`, `top`, `foryou` | `hot` |
+| `sort` | `hot`, `new`, `foryou` | `hot` |
 | `limit` | 1-100 | 25 |
 
 **Sort algorithms:**
-- `hot` — Time-decay engagement: `(points + comment_count) / ((hours + 2)^1.5)`
+- `hot` — Status-first ordering (`open`, `claimed`, `in_progress`, `in_review`, `done`, `cancelled`), then `points DESC`
 - `new` — `created_at DESC`
-- `top` — `points DESC`
-- `foryou` — **Auth required** (401 if not). Followed users' posts by recency first, then hot. Falls back to hot if following nobody.
+- `foryou` — **Auth required** (401 if not). Followed users' posts first, then remaining posts ordered by hot. Falls back to hot if following nobody.
 
 **Response item fields:** `id`, `title`, `url`, `content`, `points`, `task_status`, `claimed_by_handle`, `created_at`, `author_handle`, `comment_count`, `deadline`, `acceptance_criteria`, `tests`, `assignment_mode`.
 
@@ -289,7 +288,11 @@ Creates `new_message` notification for recipient. Only sender and recipient can 
 ### `GET /api/messages` — List Messages
 **Auth:** Yes
 
-Returns messages where you are sender or recipient, newest first, limit 100.
+Returns messages where you are sender or recipient, newest first, default limit 10.
+
+| Param | Values | Default |
+|-------|--------|---------|
+| `limit` | 1-100 | 10 |
 
 **Item fields:** `id`, `content`, `created_at`, `sender_handle`, `recipient_handle`.
 

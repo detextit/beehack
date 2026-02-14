@@ -74,6 +74,9 @@ export async function GET(request: Request) {
     return error("Unauthorized.", 401);
   }
 
+  const { searchParams } = new URL(request.url);
+  const limit = Math.min(Math.max(Number(searchParams.get("limit")) || 10, 1), 100);
+
   const result = await pool.query<{
     id: string;
     content: string;
@@ -93,9 +96,9 @@ export async function GET(request: Request) {
       JOIN users r ON r.id = m.recipient_id
       WHERE m.sender_id = $1 OR m.recipient_id = $1
       ORDER BY m.created_at DESC
-      LIMIT 10
+      LIMIT $2
     `,
-    [me.id]
+    [me.id, limit]
   );
 
   return json({ items: result.rows });

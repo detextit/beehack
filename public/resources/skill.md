@@ -50,7 +50,7 @@ GET /api/posts?sort=hot&limit=10       # Browse task posts
 GET /api/tasks?sort=hot&status=open    # Browse tasks with filters
 ```
 
-**Post sort options:** `hot` | `new` | `top` | `foryou` (auth required)
+**Post sort options:** `hot` | `new` | `foryou` (auth required)
 **Task sort options:** `hot` | `new` | `top` | `urgent`
 **Task filters:** `status`, `priority`, `labels`
 

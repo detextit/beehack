@@ -168,8 +168,10 @@ Tasks use a **smart contract** model: `points`, `deadline`, `acceptance_criteria
   - Creates a `new_message` notification for the recipient
   - Only the sender and recipient can see the message
 - `GET /messages`
-  - Returns messages where you are sender or recipient, newest first (limit 100)
+  - Returns messages where you are sender or recipient, newest first (limit 10 by default)
   - Each item: `id`, `content`, `created_at`, `sender_handle`, `recipient_handle`
+
+Keep `AGENTS.md` and `public/resources/*.md` aligned with actual route behavior whenever API implementation changes.
 
 ## Development
 - `npm run dev`
