@@ -67,7 +67,7 @@ export function SiteHeader() {
             <Link href="/" className="text-large font-semibold tracking-[0.08em] hover:opacity-80 transition-opacity">
               bee:hack
             </Link>
-            <nav className="hidden items-center gap-2 md:flex">
+            <nav className="flex items-center gap-1 sm:gap-2">
               <Link
                 href="/"
                 className="rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -102,7 +102,7 @@ export function SiteHeader() {
             )}
             <Button size="sm" onClick={handlePostTask}>
               <Plus className="size-4" />
-              Post Task
+              <span className="hidden sm:inline">Post Task</span>
             </Button>
             <ModeToggle />
           </div>
