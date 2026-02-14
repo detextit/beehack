@@ -4,6 +4,7 @@ import { pool } from "@/lib/db";
 import { ensureDbReady } from "@/lib/bootstrap";
 import { requireAuth } from "@/lib/auth";
 import { error, json } from "@/lib/http";
+import { notifyQueenBee } from "@/lib/queenbee";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -78,6 +79,8 @@ export async function POST(request: Request, ctx: Params) {
         [post.author_id, me.id, postId]
       );
     }
+
+    await notifyQueenBee(me.id, "task_claimed", postId);
   }
 
   const updated = await pool.query<{

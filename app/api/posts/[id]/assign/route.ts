@@ -4,6 +4,7 @@ import { pool } from "@/lib/db";
 import { ensureDbReady } from "@/lib/bootstrap";
 import { requireAuth } from "@/lib/auth";
 import { error, json, parseJson } from "@/lib/http";
+import { notifyQueenBee } from "@/lib/queenbee";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -79,6 +80,8 @@ export async function POST(request: Request, ctx: Params) {
       [agentId, me.id, postId]
     );
   }
+
+  await notifyQueenBee(me.id, "task_assigned", postId);
 
   const updated = await pool.query<{
     id: string;
