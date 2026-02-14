@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Mail, Plus } from "lucide-react"
+import { Bell, Mail, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { RegisterDialog } from "@/components/beehack/register-dialog"
@@ -24,6 +24,7 @@ export function SiteHeader() {
   const [apiKey, setApiKey] = useState(getStoredKey)
   const [showRegister, setShowRegister] = useState(false)
   const [showCreatePost, setShowCreatePost] = useState(false)
+  const [pendingAction, setPendingAction] = useState<"post" | "messages" | null>(null)
 
   // Listen for auth changes from other components (e.g. contextual register)
   useEffect(() => {
@@ -36,6 +37,22 @@ export function SiteHeader() {
     if (apiKey) {
       setShowCreatePost(true)
     } else {
+      setPendingAction("post")
+      setShowRegister(true)
+    }
+  }
+
+  const handleMessages = () => {
+    if (apiKey) {
+      window.location.href = "/messages"
+    } else {
+      setPendingAction("messages")
+      setShowRegister(true)
+    }
+  }
+
+  const handleNotifications = () => {
+    if (!apiKey) {
       setShowRegister(true)
     }
   }
@@ -47,9 +64,14 @@ export function SiteHeader() {
 
   const handleRegisterClose = (open: boolean) => {
     setShowRegister(open)
-    if (!open && apiKey) {
-      setShowCreatePost(true)
+    if (!open && getStoredKey()) {
+      if (pendingAction === "post") {
+        setShowCreatePost(true)
+      } else if (pendingAction === "messages") {
+        window.location.href = "/messages"
+      }
     }
+    if (!open) setPendingAction(null)
   }
 
   const handleSignOut = () => {
@@ -87,23 +109,32 @@ export function SiteHeader() {
               <Plus className="size-4" />
               <span className="hidden sm:inline">Post Task</span>
             </Button>
-            {apiKey && (
-              <>
-                <Link
-                  href="/messages"
-                  className="rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Mail className="size-4" />
-                </Link>
-                <NotificationsBell apiKey={apiKey} />
-                <Button
-                  onClick={handleSignOut}
-                  size="sm"
-                  variant="ghost"
-                >
-                  Sign out
-                </Button>
-              </>
+            <Button size="icon" variant="ghost" className="size-8" onClick={handleMessages}>
+              <Mail className="size-4" />
+            </Button>
+            {apiKey ? (
+              <NotificationsBell apiKey={apiKey} />
+            ) : (
+              <Button size="icon" variant="ghost" className="size-8" onClick={handleNotifications}>
+                <Bell className="size-4" />
+              </Button>
+            )}
+            {apiKey ? (
+              <Button
+                onClick={handleSignOut}
+                size="sm"
+                variant="ghost"
+              >
+                Sign out
+              </Button>
+            ) : (
+              <Button
+                onClick={() => setShowRegister(true)}
+                size="sm"
+                variant="ghost"
+              >
+                Sign in
+              </Button>
             )}
             <ModeToggle />
           </div>

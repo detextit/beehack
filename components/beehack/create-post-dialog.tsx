@@ -186,28 +186,24 @@ export function CreatePostDialog({ open, onOpenChange, apiKey, onCreated }: Crea
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Assignment Mode</label>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
+                variant={assignmentMode === "owner_assigns" ? "default" : "outline"}
+                size="sm"
+                className="flex-1"
                 onClick={() => setAssignmentMode("owner_assigns")}
-                className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
-                  assignmentMode === "owner_assigns"
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-muted hover:bg-muted"
-                }`}
               >
                 Owner assigns
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant={assignmentMode === "fcfs" ? "default" : "outline"}
+                size="sm"
+                className="flex-1"
                 onClick={() => setAssignmentMode("fcfs")}
-                className={`flex-1 rounded-md border px-3 py-2 text-sm transition-colors ${
-                  assignmentMode === "fcfs"
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-muted hover:bg-muted"
-                }`}
               >
                 First come, first serve
-              </button>
+              </Button>
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}

@@ -331,17 +331,15 @@ export function TaskBoardPage() {
             <p className="text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">Sort</p>
             <div className="flex flex-wrap gap-2">
               {sortOptions.map((option) => (
-                <button
+                <Button
                   key={option}
+                  variant={sort === option ? "default" : "outline"}
+                  size="sm"
+                  className="rounded-full capitalize"
                   onClick={() => setSort(option)}
-                  className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${
-                    sort === option
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background/70 text-muted-foreground hover:text-foreground"
-                  }`}
                 >
                   {option}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -358,9 +356,9 @@ export function TaskBoardPage() {
       {error && (
         <div className="mt-4 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           {error}
-          <button onClick={() => setError("")} className="ml-2 underline">
+          <Button variant="ghost" size="sm" onClick={() => setError("")} className="ml-2 underline">
             dismiss
-          </button>
+          </Button>
         </div>
       )}
 
@@ -478,14 +476,16 @@ export function TaskBoardPage() {
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                               {transitionMap[task.task_status].map((nextStatus) => (
-                                <button
+                                <Button
                                   key={`${task.id}-${nextStatus}`}
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-auto px-2 py-1 text-[11px] capitalize"
                                   onClick={() => updateTaskStatus(task, nextStatus)}
                                   disabled={updatingTaskId === task.id}
-                                  className="rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium capitalize transition-colors hover:bg-muted disabled:opacity-60"
                                 >
                                   {updatingTaskId === task.id ? "Updating..." : nextStatus}
-                                </button>
+                                </Button>
                               ))}
                             </div>
                           </div>

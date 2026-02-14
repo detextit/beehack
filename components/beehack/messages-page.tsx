@@ -227,7 +227,7 @@ export function MessagesPage() {
       {error && (
         <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           {error}
-          <button onClick={() => setError("")} className="ml-2 underline">dismiss</button>
+          <Button variant="ghost" size="sm" onClick={() => setError("")} className="ml-2 underline">dismiss</Button>
         </div>
       )}
 
@@ -253,13 +253,14 @@ export function MessagesPage() {
 
           <div className="divide-y">
             {conversations.map((convo) => (
-              <button
+              <Button
                 key={convo.handle}
+                variant="ghost"
                 onClick={() => {
                   setSelectedHandle(convo.handle)
                   setShowNewConversation(false)
                 }}
-                className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 ${
+                className={`flex h-auto w-full items-start gap-3 rounded-none px-4 py-3 text-left transition-colors hover:bg-muted/50 ${
                   selectedHandle === convo.handle && !showNewConversation
                     ? "bg-muted/80"
                     : "bg-card"
@@ -280,7 +281,7 @@ export function MessagesPage() {
                     {convo.lastMessage.content}
                   </p>
                 </div>
-              </button>
+              </Button>
             ))}
           </div>
         </div>

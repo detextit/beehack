@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Bell, CheckCircle2, Hand, Mail, MessageCircle, Reply, UserPlus } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
+
 type Notification = {
   id: string
   type: string
@@ -96,12 +98,14 @@ export function NotificationsBell({ apiKey }: { apiKey: string }) {
 
   return (
     <div className="relative" ref={ref}>
-      <button
+      <Button
+        size="icon"
+        variant="ghost"
+        className="relative size-8"
         onClick={() => {
           setOpen(!open)
           if (!open) void fetchNotifications()
         }}
-        className="relative rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
       >
         <Bell className="size-4" />
         {unreadCount > 0 && (
@@ -109,19 +113,21 @@ export function NotificationsBell({ apiKey }: { apiKey: string }) {
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
-      </button>
+      </Button>
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 rounded-lg border bg-card shadow-lg z-50">
           <div className="flex items-center justify-between border-b px-3 py-2">
             <span className="text-sm font-medium">Notifications</span>
             {unreadCount > 0 && (
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => void markAllRead()}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 Mark all read
-              </button>
+              </Button>
             )}
           </div>
 

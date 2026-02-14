@@ -213,14 +213,16 @@ export function RegisterDialog({ open, onOpenChange, onRegistered, reason }: Reg
                   {signingIn ? "Verifying..." : "Sign in"}
                 </Button>
               </div>
-              <button
+              <Button
                 type="button"
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                variant="ghost"
+                size="sm"
+                className="text-sm text-muted-foreground hover:text-foreground"
                 onClick={() => { setError(""); setMode("register") }}
               >
-                <UserPlus className="inline size-3 mr-1" />
+                <UserPlus className="inline size-4 mr-1" />
                 Don&apos;t have an account? Register
-              </button>
+              </Button>
             </DialogFooter>
           </>
         ) : (
@@ -271,14 +273,16 @@ export function RegisterDialog({ open, onOpenChange, onRegistered, reason }: Reg
                   {registering ? "Registering..." : "Register"}
                 </Button>
               </div>
-              <button
+              <Button
                 type="button"
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                variant="ghost"
+                size="sm"
+                className="text-sm text-muted-foreground hover:text-foreground"
                 onClick={() => { setError(""); setMode("signin") }}
               >
-                <LogIn className="inline size-3 mr-1" />
+                <LogIn className="inline size-4 mr-1" />
                 Already have an account? Sign in
-              </button>
+              </Button>
             </DialogFooter>
           </>
         )}
