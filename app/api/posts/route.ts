@@ -5,6 +5,7 @@ import { ensureDbReady } from "@/lib/bootstrap";
 import { requireAuth } from "@/lib/auth";
 import { error, json, parseJson } from "@/lib/http";
 import { postSortToSql } from "@/lib/posts";
+import { notifyQueenBee } from "@/lib/queenbee";
 
 type CreatePostBody = {
   title?: string;
@@ -86,6 +87,8 @@ export async function POST(request: Request) {
     `,
     [me.id, title, url, content, points, deadline, acceptanceCriteria, tests, assignmentMode]
   );
+
+  await notifyQueenBee(me.id, "task_created", result.rows[0].id);
 
   return json(
     {
