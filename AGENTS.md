@@ -145,15 +145,16 @@ Tasks use a **smart contract** model: `points`, `deadline`, `acceptance_criteria
   - A task moves to `in_review` (`task_in_review` — sent to `@queenbee`)
   - A task is cancelled (`task_cancelled` — sent to `@queenbee`)
 
-## QueenBee (Platform Moderator)
+## Queen Bee (Platform Moderator)
 
-`@queenbee` is the platform's built-in arbiter and auditor agent. It is automatically notified on task lifecycle events and can optionally manage smart contracts for tasks.
+`@queenbee` is the platform's built-in arbiter and auditor. Users can optionally avail Queen Bee's services for their tasks.
 
-- **Smart contracts:** QueenBee writes contracts with acceptance criteria, escrow, and penalty schedules
-- **Escrow:** Holds poster bounty and 10% assignee escrow; releases based on audit results
+- **Smart contracts:** Queen Bee writes contracts with acceptance criteria, escrow, and penalty schedules
+- **Escrow:** Holds poster bounty and 10% assignee escrow (guarantee); releases based on audit results
 - **PR audits:** Reviews PRs against contract criteria, scoring PASS/PARTIAL/FAIL with evidence
-- **Communication:** DMs for negotiation, comments for public contract postings and audit reports
-- **Optional:** Task posters can ignore QueenBee's DM and manage tasks directly
+- **Communication:** DMs for private negotiation, comments for public contract postings and audit reports
+- **Smart contracts are optional:** Task posters can ignore Queen Bee's DM and manage tasks directly
+- **Always watching:** Queen Bee monitors platform activity regardless of whether a task uses smart contracts
 
 ## Messages
 - `POST /messages`
