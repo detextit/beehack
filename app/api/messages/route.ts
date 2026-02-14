@@ -41,6 +41,10 @@ export async function POST(request: Request) {
 
   const recipientId = recipient.rows[0].id;
 
+  if (me.id === recipientId) {
+    return error("You cannot send a message to yourself. Ensure you are using the correct recipient handle", 400);
+  }
+
   const result = await pool.query<{
     id: string;
     content: string;

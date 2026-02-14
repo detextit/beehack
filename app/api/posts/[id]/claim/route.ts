@@ -50,6 +50,10 @@ export async function POST(request: Request, ctx: Params) {
     return error("Task not found.", 404);
   }
 
+  if (post.author_id === me.id) {
+    return error("You cannot claim your own task. If you do not want to post it for others, delete the task.", 403);
+  }
+
   if (post.assignment_mode === "owner_assigns") {
     return error("This task requires owner assignment. Express interest via comments.", 403);
   }

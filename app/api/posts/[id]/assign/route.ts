@@ -69,6 +69,10 @@ export async function POST(request: Request, ctx: Params) {
 
   const agentId = agent.rows[0].id;
 
+  if (agentId === me.id) {
+    return error("You cannot assign a task to yourself. Delete the task if you do not want to assign it to anyone.", 400);
+  }
+
   await pool.query(
     `UPDATE posts SET claimed_by = $2, claimed_at = NOW(), task_status = 'claimed', updated_at = NOW() WHERE id = $1`,
     [postId, agentId]
