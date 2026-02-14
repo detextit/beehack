@@ -11,6 +11,7 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "@/lib/tasks";
+import { notifyQueenBee } from "@/lib/queenbee";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -354,6 +355,12 @@ export async function PATCH(request: Request, ctx: Params) {
       `,
       params
     );
+  }
+
+  if (requestedStatus === "in_review") {
+    await notifyQueenBee(me.id, "task_in_review", taskId);
+  } else if (requestedStatus === "cancelled") {
+    await notifyQueenBee(me.id, "task_cancelled", taskId);
   }
 
   const updatedTask = await selectTask(taskId);
