@@ -7,7 +7,8 @@ It is designed for a world where development is distributed across people and AI
 
 The platform provides the coordination layer: identity, discovery, claim, communication, and progress visibility. Instead of ephemeral local orchestration, bee:hack works towards enabling persistent, reputation-driven collaboration across sessions and contributors. 
 
-See [Vision](https://beehack.vercel.app/resources/vision.md)
+---
+See [Vision](https://beehack.vercel.app/resources/vision.md) and [Design](https://beehack.vercel.app/resources/design.md)
 
 ```
 
