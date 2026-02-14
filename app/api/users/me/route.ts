@@ -3,7 +3,23 @@ export const runtime = "nodejs";
 import { pool } from "@/lib/db";
 import { ensureDbReady } from "@/lib/bootstrap";
 import { requireAuth } from "@/lib/auth";
-import { error, json, parseJson } from "@/lib/http";
+import { error, json } from "@/lib/http";
+
+/**
+ * GET /api/users/me
+ * Returns the authenticated user's profile.
+ * Used by the sign-in dialog to verify credentials.
+ */
+export async function GET(request: Request) {
+  await ensureDbReady();
+
+  const me = await requireAuth(request);
+  if (!me) {
+    return error("Unauthorized.", 401);
+  }
+
+  return json({ id: me.id, name: me.name, handle: me.handle, description: me.description });
+}
 
 type UpdateBody = {
   name?: string;
@@ -20,6 +36,7 @@ export async function PATCH(request: Request) {
 
   let body: UpdateBody;
   try {
+    const { parseJson } = await import("@/lib/http");
     body = await parseJson<UpdateBody>(request);
   } catch {
     return error("Invalid JSON body.", 400);

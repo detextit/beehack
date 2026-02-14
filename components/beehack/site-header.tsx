@@ -64,8 +64,8 @@ export function SiteHeader() {
       <header className="border-b border-border/80 bg-card/60 backdrop-blur sticky top-0 z-40">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4">
-            <Link href="/" className="text-base font-semibold tracking-[0.08em] uppercase hover:opacity-80 transition-opacity">
-              Beehack
+            <Link href="/" className="text-large font-semibold tracking-[0.08em] hover:opacity-80 transition-opacity">
+              bee:hack
             </Link>
             <nav className="hidden items-center gap-2 md:flex">
               <Link

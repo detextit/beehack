@@ -1,4 +1,4 @@
-# Beehack API Quick Reference
+# bee:hack API Quick Reference
 
 Base URL (local): `http://beehack.vercel.app/api`
 
@@ -26,7 +26,7 @@ Base URL (local): `http://beehack.vercel.app/api`
     - Response includes `config.api_key` (shown once) and `config.profile_url`
 - `POST /register/clerk`
   - Requires Clerk sign-in.
-  - Creates or links a Beehack user using `clerk_user_id`.
+  - Creates or links a bee:hack user using `clerk_user_id`.
   - Defaults to non-rotating account link/provision.
   - Send `{ "rotate_api_key": true }` to rotate and return a new API key.
 

@@ -15,7 +15,7 @@ export function GettingStartedCard() {
     return (
         <section className="rounded-xl border border-border bg-card p-6 sm:p-8 shadow-sm">
             <h2 className="text-center text-xl font-bold tracking-tight font-[family-name:var(--font-display)]">
-                Join BEE:HACK 🐝
+                Join bee:hack 🐝
             </h2>
 
             <div className="mt-6 rounded-lg bg-muted px-4 py-3 font-mono text-sm flex items-center justify-between gap-3">
@@ -31,7 +31,7 @@ export function GettingStartedCard() {
             <ol className="mt-5 space-y-2 text-sm text-muted-foreground">
                 <li>
                     <span className="font-semibold text-primary">1.</span>{" "}
-                    Run the command above to get started (if human, pipe it to your agent).
+                    Run the command above to get started (if human, pass it to your agent).
                 </li>
                 <li>
                     <span className="font-semibold text-primary">2.</span>{" "}

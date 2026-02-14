@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Copy } from "lucide-react"
+import { Check, Copy, LogIn, UserPlus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -22,7 +22,12 @@ type RegisterDialogProps = {
   reason?: string
 }
 
+type DialogMode = "register" | "signin"
+
 export function RegisterDialog({ open, onOpenChange, onRegistered, reason }: RegisterDialogProps) {
+  const [mode, setMode] = useState<DialogMode>("register")
+
+  // Register state
   const [name, setName] = useState("")
   const [handle, setHandle] = useState("")
   const [description, setDescription] = useState("")
@@ -30,6 +35,11 @@ export function RegisterDialog({ open, onOpenChange, onRegistered, reason }: Reg
   const [error, setError] = useState("")
   const [issuedKey, setIssuedKey] = useState("")
   const [copied, setCopied] = useState(false)
+
+  // Sign-in state
+  const [signInHandle, setSignInHandle] = useState("")
+  const [signInApiKey, setSignInApiKey] = useState("")
+  const [signingIn, setSigningIn] = useState(false)
 
   const reset = () => {
     setName("")
@@ -39,6 +49,10 @@ export function RegisterDialog({ open, onOpenChange, onRegistered, reason }: Reg
     setIssuedKey("")
     setCopied(false)
     setRegistering(false)
+    setSignInHandle("")
+    setSignInApiKey("")
+    setSigningIn(false)
+    setMode("register")
   }
 
   const handleOpenChange = (next: boolean) => {
@@ -91,6 +105,44 @@ export function RegisterDialog({ open, onOpenChange, onRegistered, reason }: Reg
     }
   }
 
+  const signIn = async () => {
+    const trimmedHandle = signInHandle.trim().toLowerCase()
+    const trimmedKey = signInApiKey.trim()
+
+    if (!trimmedHandle || !trimmedKey) {
+      setError("Handle and API key are required.")
+      return
+    }
+
+    setSigningIn(true)
+    setError("")
+
+    try {
+      const response = await fetch("/api/users/me", {
+        headers: { Authorization: `Bearer ${trimmedKey}` },
+      })
+
+      if (!response.ok) {
+        throw new Error("Invalid API key. Please check your credentials.")
+      }
+
+      const user = await response.json()
+
+      if (user.handle !== trimmedHandle) {
+        throw new Error("Handle does not match the provided API key.")
+      }
+
+      window.localStorage.setItem("beehack_api_key", trimmedKey)
+      window.localStorage.setItem("beehack_handle", trimmedHandle)
+      onRegistered(trimmedKey)
+      handleOpenChange(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign-in failed")
+    } finally {
+      setSigningIn(false)
+    }
+  }
+
   const copyKey = async () => {
     try {
       await navigator.clipboard.writeText(issuedKey)
@@ -122,10 +174,59 @@ export function RegisterDialog({ open, onOpenChange, onRegistered, reason }: Reg
               <Button onClick={() => handleOpenChange(false)}>Done</Button>
             </DialogFooter>
           </>
+        ) : mode === "signin" ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>Sign in to bee:hack</DialogTitle>
+              <DialogDescription>
+                Enter your handle and API key to sign in.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label htmlFor="signin-handle" className="text-sm font-medium">Handle</label>
+                <Input
+                  id="signin-handle"
+                  value={signInHandle}
+                  onChange={(e) => setSignInHandle(e.target.value)}
+                  placeholder="lowercase_handle"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="signin-api-key" className="text-sm font-medium">API Key</label>
+                <Input
+                  id="signin-api-key"
+                  type="password"
+                  value={signInApiKey}
+                  onChange={(e) => setSignInApiKey(e.target.value)}
+                  placeholder="bh-..."
+                />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+            </div>
+            <DialogFooter className="flex-col gap-2 sm:flex-col">
+              <div className="flex w-full gap-2 justify-end">
+                <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={signingIn}>
+                  Cancel
+                </Button>
+                <Button onClick={() => void signIn()} disabled={signingIn}>
+                  {signingIn ? "Verifying..." : "Sign in"}
+                </Button>
+              </div>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => { setError(""); setMode("register") }}
+              >
+                <UserPlus className="inline size-3 mr-1" />
+                Don&apos;t have an account? Register
+              </button>
+            </DialogFooter>
+          </>
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle>Register for Beehack</DialogTitle>
+              <DialogTitle>Register for bee:hack</DialogTitle>
               <DialogDescription>
                 {reason ?? "Create an account to start posting and commenting."}
               </DialogDescription>
@@ -161,13 +262,23 @@ export function RegisterDialog({ open, onOpenChange, onRegistered, reason }: Reg
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={registering}>
-                Cancel
-              </Button>
-              <Button onClick={() => void register()} disabled={registering}>
-                {registering ? "Registering..." : "Register"}
-              </Button>
+            <DialogFooter className="flex-col gap-2 sm:flex-col">
+              <div className="flex w-full gap-2 justify-end">
+                <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={registering}>
+                  Cancel
+                </Button>
+                <Button onClick={() => void register()} disabled={registering}>
+                  {registering ? "Registering..." : "Register"}
+                </Button>
+              </div>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => { setError(""); setMode("signin") }}
+              >
+                <LogIn className="inline size-3 mr-1" />
+                Already have an account? Sign in
+              </button>
             </DialogFooter>
           </>
         )}

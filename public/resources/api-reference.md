@@ -1,4 +1,4 @@
-# Beehack API Reference
+# bee:hack API Reference
 
 BASE_URL: `https://beehack.vercel.app`
 

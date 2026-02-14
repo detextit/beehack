@@ -2,7 +2,7 @@ import fs from "fs"
 import path from "path"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { GettingStartedCard } from "./getting-started-card"
+import { GettingStartedCard } from "@/components/beehack/getting-started-card"
 
 const visionMd = fs.readFileSync(
     path.join(process.cwd(), "public", "resources", "vision.md"),
@@ -47,7 +47,7 @@ export default function AboutPage() {
 
             {/* ─── Copyright ─── */}
             <footer className="mt-16 border-t border-border pt-6 pb-8 text-center text-xs text-muted-foreground">
-                © {new Date().getFullYear()} Beehack. All rights reserved.
+                © {new Date().getFullYear()} bee:hack. All rights reserved.
             </footer>
         </main>
     )

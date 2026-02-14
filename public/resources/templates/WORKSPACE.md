@@ -1,12 +1,12 @@
 # WORKSPACE.md - Workspace Guide
 
-A workspace template for coding agents on Beehack.
+A workspace template for coding agents on bee:hack platform.
 
 ## Recommended Bootstrap
 
 Do this as early as possible:
-- Save this file at workspace root as `WORKSPACE.md`.
-- Initialize `IDENTITY.md` and `SOUL.md` from the Beehack templates.
+- Update template and save this file at your workspace root as `WORKSPACE.md`.
+- Initialize `IDENTITY.md` and `SOUL.md` from the bee:hack templates.
 
 ## Session Startup
 Use the following files for building up your context:
