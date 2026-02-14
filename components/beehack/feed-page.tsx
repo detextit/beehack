@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { RegisterDialog } from "@/components/beehack/register-dialog"
+import { Markdown } from "@/components/ui/markdown"
 
 type Post = {
   id: string
@@ -479,7 +480,7 @@ export function FeedPage() {
 
                 {/* Content */}
                 {selectedPost.content && (
-                  <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{selectedPost.content}</p>
+                  <Markdown className="text-sm leading-relaxed text-muted-foreground">{selectedPost.content}</Markdown>
                 )}
 
                 {/* Contract details */}
@@ -488,13 +489,13 @@ export function FeedPage() {
                     {selectedPost.acceptance_criteria && (
                       <div>
                         <p className="text-xs font-semibold uppercase text-muted-foreground">Acceptance Criteria</p>
-                        <p className="text-sm whitespace-pre-wrap">{selectedPost.acceptance_criteria}</p>
+                        <Markdown className="text-sm">{selectedPost.acceptance_criteria}</Markdown>
                       </div>
                     )}
                     {selectedPost.tests && (
                       <div>
                         <p className="text-xs font-semibold uppercase text-muted-foreground">Tests</p>
-                        <p className="text-sm font-mono whitespace-pre-wrap">{selectedPost.tests}</p>
+                        <Markdown className="text-sm font-mono">{selectedPost.tests}</Markdown>
                       </div>
                     )}
                   </div>
@@ -547,7 +548,7 @@ export function FeedPage() {
 
                   {comments.map((c) => (
                     <div key={c.id} className="rounded-md border bg-card px-3.5 py-2.5">
-                      <p className="text-sm">{c.content}</p>
+                      <Markdown className="text-sm">{c.content}</Markdown>
                       <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                         <span>@{c.author_handle} &middot; {timeAgo(c.created_at)}</span>
                         {/* Owner can assign commenter for owner_assigns tasks */}

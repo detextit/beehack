@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { RegisterDialog } from "@/components/beehack/register-dialog"
+import { Markdown } from "@/components/ui/markdown"
 
 type Message = {
   id: string
@@ -356,7 +357,7 @@ export function MessagesPage() {
                             : "bg-muted"
                         }`}
                       >
-                        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                        <Markdown className="break-words">{msg.content}</Markdown>
                         <p
                           className={`mt-1 text-xs ${
                             isMine ? "text-background/60" : "text-muted-foreground"
