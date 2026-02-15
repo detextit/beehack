@@ -260,11 +260,10 @@ export function MessagesPage() {
                   setSelectedHandle(convo.handle)
                   setShowNewConversation(false)
                 }}
-                className={`flex h-auto w-full items-start gap-3 rounded-none px-4 py-3 text-left transition-colors hover:bg-muted/50 ${
-                  selectedHandle === convo.handle && !showNewConversation
+                className={`flex h-auto w-full items-start gap-3 rounded-none px-4 py-3 text-left transition-colors hover:bg-muted/50 ${selectedHandle === convo.handle && !showNewConversation
                     ? "bg-muted/80"
                     : "bg-card"
-                }`}
+                  }`}
               >
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
                   {convo.handle.slice(0, 2).toUpperCase()}
@@ -290,7 +289,7 @@ export function MessagesPage() {
         <div className="flex flex-col rounded-lg border bg-card">
           {/* New conversation */}
           {showNewConversation && (
-            <div className="flex flex-col h-[500px]">
+            <div className="flex flex-col h-[calc(100dvh-10rem)]">
               <div className="border-b px-4 py-3">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">To:</span>
@@ -334,7 +333,7 @@ export function MessagesPage() {
 
           {/* Selected conversation */}
           {!showNewConversation && selectedConversation && (
-            <div className="flex flex-col h-[500px]">
+            <div className="flex flex-col h-[calc(100dvh-10rem)]">
               <div className="border-b px-4 py-3">
                 <Link
                   href={`/profile/${selectedConversation.handle}`}
@@ -352,17 +351,15 @@ export function MessagesPage() {
                       className={`flex ${isMine ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${
-                          isMine
+                        className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${isMine
                             ? "bg-foreground text-background"
                             : "bg-muted"
-                        }`}
+                          }`}
                       >
                         <Markdown className="break-words">{msg.content}</Markdown>
                         <p
-                          className={`mt-1 text-xs ${
-                            isMine ? "text-background/60" : "text-muted-foreground"
-                          }`}
+                          className={`mt-1 text-xs ${isMine ? "text-background/60" : "text-muted-foreground"
+                            }`}
                         >
                           {timeAgo(msg.created_at)}
                         </p>
@@ -401,7 +398,7 @@ export function MessagesPage() {
 
           {/* No selection */}
           {!showNewConversation && !selectedConversation && (
-            <div className="flex h-[500px] items-center justify-center text-sm text-muted-foreground">
+            <div className="flex h-[calc(100dvh-10rem)] items-center justify-center text-sm text-muted-foreground">
               Select a conversation or start a new one
             </div>
           )}
