@@ -63,27 +63,74 @@ export async function POST(request: Request, ctx: Params) {
     return error("Task has no assignee. Assign someone before marking complete.", 400);
   }
 
-  // For escrow tasks, redirect to /settle
+  // For escrow tasks, only queenbee can settle
   if (post.escrow_status !== "none") {
-    return error("This task has escrow. Use POST /api/posts/:id/settle to settle with specific payout amounts.", 400);
+    return error("This task uses escrow. Only @queenbee can settle it via POST /api/posts/:id/settle.", 400);
   }
 
-  // Non-escrow tasks: mark done and award points atomically
-  await pool.query(
-    `UPDATE posts SET task_status = 'done', completed_at = NOW(), updated_at = NOW() WHERE id = $1`,
-    [postId]
+  // Check poster has sufficient points to pay the bounty
+  const posterBalance = await pool.query<{ total_points: number }>(
+    `SELECT total_points FROM users WHERE id = $1`,
+    [post.author_id]
   );
+  const balance = posterBalance.rows[0]?.total_points ?? 0;
+  if (balance < post.points) {
+    return error(`Poster has insufficient points. Needs ${post.points} but has ${balance}.`, 400);
+  }
 
-  await pool.query(
-    `UPDATE users SET total_points = total_points + $1 WHERE id = $2`,
-    [post.points, post.claimed_by]
-  );
+  // Transfer bounty: deduct from poster, credit to worker
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  if (post.claimed_by !== me.id) {
-    await pool.query(
-      `INSERT INTO notifications (recipient_id, actor_id, type, post_id) VALUES ($1, $2, 'task_completed', $3)`,
-      [post.claimed_by, me.id, postId]
+    await client.query(
+      `UPDATE posts SET task_status = 'done', completed_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      [postId]
     );
+
+    await client.query(
+      `UPDATE users SET total_points = total_points - $1 WHERE id = $2`,
+      [post.points, post.author_id]
+    );
+
+    await client.query(
+      `UPDATE users SET total_points = total_points + $1 WHERE id = $2`,
+      [post.points, post.claimed_by]
+    );
+
+    // Ledger entries
+    const posterBal = await client.query<{ total_points: number }>(
+      `SELECT total_points FROM users WHERE id = $1`, [post.author_id]
+    );
+    const workerBal = await client.query<{ total_points: number }>(
+      `SELECT total_points FROM users WHERE id = $1`, [post.claimed_by]
+    );
+
+    await client.query(
+      `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
+       VALUES ($1, $2, $3, 'bounty_payout', $4, $5)`,
+      [post.author_id, postId, -post.points, posterBal.rows[0].total_points, JSON.stringify({ type: "bounty_transfer" })]
+    );
+
+    await client.query(
+      `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
+       VALUES ($1, $2, $3, 'bounty_payout', $4, $5)`,
+      [post.claimed_by, postId, post.points, workerBal.rows[0].total_points, JSON.stringify({ type: "bounty_transfer" })]
+    );
+
+    if (post.claimed_by !== me.id) {
+      await client.query(
+        `INSERT INTO notifications (recipient_id, actor_id, type, post_id) VALUES ($1, $2, 'task_completed', $3)`,
+        [post.claimed_by, me.id, postId]
+      );
+    }
+
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
   }
 
   const updated = await pool.query<{

@@ -362,6 +362,11 @@ export async function PATCH(request: Request, ctx: Params) {
 
   // Handle escrow refunds on cancellation
   if (requestedStatus === "cancelled" && (current.escrow_status === "poster_held" || current.escrow_status === "both_held")) {
+    // Poster cannot cancel after worker has accepted escrow
+    if (current.escrow_status === "both_held" && me.id === current.author_id) {
+      return error("Cannot cancel after assignee has accepted escrow. Only the assignee can abandon.", 403);
+    }
+
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -381,54 +386,25 @@ export async function PATCH(request: Request, ctx: Params) {
           [current.author_id, taskId, current.poster_escrow, bal.rows[0].total_points, JSON.stringify({ type: "cancellation_refund" })]
         );
       } else if (current.escrow_status === "both_held") {
-        const cancelledByPoster = me.id === current.author_id;
-
-        if (cancelledByPoster) {
-          // Poster cancels: both get their escrow back
-          await client.query(
-            `UPDATE users SET total_points = total_points + $1 WHERE id = $2`,
-            [current.poster_escrow, current.author_id]
-          );
-          await client.query(
-            `UPDATE users SET total_points = total_points + $1 WHERE id = $2`,
-            [current.assignee_escrow, current.claimed_by]
-          );
-          const posterBal = await client.query<{ total_points: number }>(
-            `SELECT total_points FROM users WHERE id = $1`, [current.author_id]
-          );
-          const assigneeBal = await client.query<{ total_points: number }>(
-            `SELECT total_points FROM users WHERE id = $1`, [current.claimed_by]
-          );
-          await client.query(
-            `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
-             VALUES ($1, $2, $3, 'refund', $4, $5)`,
-            [current.author_id, taskId, current.poster_escrow, posterBal.rows[0].total_points, JSON.stringify({ type: "cancellation_refund" })]
-          );
-          await client.query(
-            `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
-             VALUES ($1, $2, $3, 'escrow_release', $4, $5)`,
-            [current.claimed_by, taskId, current.assignee_escrow, assigneeBal.rows[0].total_points, JSON.stringify({ type: "cancellation_refund" })]
-          );
-        } else {
-          // Assignee abandons: poster gets bounty back + assignee's forfeited escrow
-          await client.query(
-            `UPDATE users SET total_points = total_points + $1 WHERE id = $2`,
-            [current.poster_escrow + current.assignee_escrow, current.author_id]
-          );
-          const posterBal = await client.query<{ total_points: number }>(
-            `SELECT total_points FROM users WHERE id = $1`, [current.author_id]
-          );
-          await client.query(
-            `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
-             VALUES ($1, $2, $3, 'refund', $4, $5)`,
-            [current.author_id, taskId, current.poster_escrow, posterBal.rows[0].total_points - current.assignee_escrow, JSON.stringify({ type: "cancellation_refund" })]
-          );
-          await client.query(
-            `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
-             VALUES ($1, $2, $3, 'escrow_forfeit', $4, $5)`,
-            [current.author_id, taskId, current.assignee_escrow, posterBal.rows[0].total_points, JSON.stringify({ type: "assignee_abandonment" })]
-          );
-        }
+        // Only reachable by assignee (poster blocked above)
+        // Assignee abandons: poster gets bounty back + assignee's forfeited escrow
+        await client.query(
+          `UPDATE users SET total_points = total_points + $1 WHERE id = $2`,
+          [current.poster_escrow + current.assignee_escrow, current.author_id]
+        );
+        const posterBal = await client.query<{ total_points: number }>(
+          `SELECT total_points FROM users WHERE id = $1`, [current.author_id]
+        );
+        await client.query(
+          `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
+           VALUES ($1, $2, $3, 'refund', $4, $5)`,
+          [current.author_id, taskId, current.poster_escrow, posterBal.rows[0].total_points - current.assignee_escrow, JSON.stringify({ type: "cancellation_refund" })]
+        );
+        await client.query(
+          `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
+           VALUES ($1, $2, $3, 'escrow_forfeit', $4, $5)`,
+          [current.author_id, taskId, current.assignee_escrow, posterBal.rows[0].total_points, JSON.stringify({ type: "assignee_abandonment" })]
+        );
       }
 
       await client.query(

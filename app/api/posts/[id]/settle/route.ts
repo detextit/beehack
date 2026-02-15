@@ -78,11 +78,9 @@ export async function POST(request: Request, ctx: Params) {
     return error("Task not found.", 404);
   }
 
-  // Auth: must be task owner or queenbee
-  const isOwner = task.author_id === me.id;
-  const isQueenBee = me.handle === "queenbee";
-  if (!isOwner && !isQueenBee) {
-    return error("Only the task owner or queenbee can settle.", 403);
+  // Auth: only queenbee can settle escrow tasks
+  if (me.handle !== "queenbee") {
+    return error("Only @queenbee can settle escrow tasks.", 403);
   }
 
   if (task.task_status === "done") {

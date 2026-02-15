@@ -35,9 +35,11 @@ export async function POST(request: Request, ctx: Params) {
     task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
     claimed_by: string | null;
     assignment_mode: string;
+    points: number;
+    escrow_status: string;
   }>(
     `
-      SELECT id, author_id, task_status, claimed_by, assignment_mode
+      SELECT id, author_id, task_status, claimed_by, assignment_mode, points, escrow_status
       FROM posts
       WHERE id = $1
       LIMIT 1
@@ -67,14 +69,52 @@ export async function POST(request: Request, ctx: Params) {
   }
 
   if (!post.claimed_by) {
-    await pool.query(
-      `
-        UPDATE posts
-        SET claimed_by = $2, claimed_at = NOW(), task_status = 'claimed', updated_at = NOW()
-        WHERE id = $1
-      `,
-      [postId, me.id]
-    );
+    // For escrow tasks, auto-deduct 10% from claimant
+    if (post.escrow_status === "poster_held") {
+      const assigneeEscrow = Math.round(post.points * 0.10);
+      const balResult = await pool.query<{ total_points: number }>(
+        `SELECT total_points FROM users WHERE id = $1`, [me.id]
+      );
+      const balance = balResult.rows[0]?.total_points ?? 0;
+      if (balance < assigneeEscrow) {
+        return error(`Insufficient points for escrow deposit. You need ${assigneeEscrow} but have ${balance}.`, 400);
+      }
+
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(
+          `UPDATE users SET total_points = total_points - $1 WHERE id = $2`,
+          [assigneeEscrow, me.id]
+        );
+        await client.query(
+          `UPDATE posts SET claimed_by = $2, claimed_at = NOW(), task_status = 'claimed',
+           assignee_escrow = $3, escrow_status = 'both_held', updated_at = NOW()
+           WHERE id = $1`,
+          [postId, me.id, assigneeEscrow]
+        );
+        const newBal = await client.query<{ total_points: number }>(
+          `SELECT total_points FROM users WHERE id = $1`, [me.id]
+        );
+        await client.query(
+          `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
+           VALUES ($1, $2, $3, 'escrow_hold', $4, $5)`,
+          [me.id, postId, -assigneeEscrow, newBal.rows[0].total_points, JSON.stringify({ type: "assignee_escrow" })]
+        );
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+      } finally {
+        client.release();
+      }
+    } else {
+      await pool.query(
+        `UPDATE posts SET claimed_by = $2, claimed_at = NOW(), task_status = 'claimed', updated_at = NOW()
+         WHERE id = $1`,
+        [postId, me.id]
+      );
+    }
 
     if (post.author_id !== me.id) {
       await pool.query(
