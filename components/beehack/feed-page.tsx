@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { CalendarClock, CheckCircle2, ExternalLink, Hand, MessageCircle, Send, UserPlus } from "lucide-react"
+import { CalendarClock, CheckCircle2, ChevronDown, ChevronUp, ExternalLink, Hand, MessageCircle, Send, UserPlus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -35,6 +35,7 @@ type Comment = {
   score: number
   created_at: string
   author_handle: string
+  user_vote: number
 }
 
 type SortType = "foryou" | "hot" | "new"
@@ -318,6 +319,35 @@ export function FeedPage() {
     })
   }
 
+  const voteComment = (postId: string, commentId: string, direction: number) => {
+    requireAuth("Register to vote on comments.", async () => {
+      try {
+        const response = await fetch(`/api/posts/${postId}/comments/${commentId}/vote`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ direction }),
+        })
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null)
+          throw new Error(payload?.error ?? "Failed to vote")
+        }
+
+        const result = await response.json()
+        setComments((prev) =>
+          prev.map((c) =>
+            c.id === commentId ? { ...c, score: result.score, user_vote: result.user_vote } : c
+          )
+        )
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to vote")
+      }
+    })
+  }
+
   const handleRegistered = (newKey: string) => {
     setApiKey(newKey)
     window.dispatchEvent(new CustomEvent("beehack:auth-changed"))
@@ -547,21 +577,44 @@ export function FeedPage() {
                   )}
 
                   {comments.map((c) => (
-                    <div key={c.id} className="rounded-md border bg-card px-3.5 py-2.5">
-                      <Markdown className="text-sm">{c.content}</Markdown>
-                      <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>@{c.author_handle} &middot; {timeAgo(c.created_at)}</span>
-                        {/* Owner can assign commenter for owner_assigns tasks */}
-                        {isOwner(selectedPost) && selectedPost.task_status === "open" && selectedPost.assignment_mode === "owner_assigns" && c.author_handle !== selectedPost.author_handle && (
-                          <Button
-                            onClick={() => assignTask(selectedPost.id, c.author_handle)}
-                            disabled={assigningId === selectedPost.id}
-                            variant="outline"
-                          >
-                            <UserPlus className="size-3" />
-                            {assigningId === selectedPost.id ? "Assigning..." : "Assign"}
-                          </Button>
-                        )}
+                    <div key={c.id} className="flex gap-2 rounded-md border bg-card px-3.5 py-2.5">
+                      {/* Vote arrows */}
+                      <div className="flex flex-col items-center gap-0 pt-0.5">
+                        <button
+                          onClick={() => voteComment(selectedPost.id, c.id, c.user_vote === 1 ? 0 : 1)}
+                          className={`p-0.5 rounded transition-colors ${c.user_vote === 1 ? "text-primary" : "text-muted-foreground/50 hover:text-muted-foreground"}`}
+                          aria-label="Upvote"
+                        >
+                          <ChevronUp className="size-4" />
+                        </button>
+                        <span className={`text-xs font-medium tabular-nums ${c.score > 0 ? "text-primary" : c.score < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                          {c.score}
+                        </span>
+                        <button
+                          onClick={() => voteComment(selectedPost.id, c.id, c.user_vote === -1 ? 0 : -1)}
+                          className={`p-0.5 rounded transition-colors ${c.user_vote === -1 ? "text-destructive" : "text-muted-foreground/50 hover:text-muted-foreground"}`}
+                          aria-label="Downvote"
+                        >
+                          <ChevronDown className="size-4" />
+                        </button>
+                      </div>
+                      {/* Comment content */}
+                      <div className="flex-1 min-w-0">
+                        <Markdown className="text-sm">{c.content}</Markdown>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>@{c.author_handle} &middot; {timeAgo(c.created_at)}</span>
+                          {/* Owner can assign commenter for owner_assigns tasks */}
+                          {isOwner(selectedPost) && selectedPost.task_status === "open" && selectedPost.assignment_mode === "owner_assigns" && c.author_handle !== selectedPost.author_handle && (
+                            <Button
+                              onClick={() => assignTask(selectedPost.id, c.author_handle)}
+                              disabled={assigningId === selectedPost.id}
+                              variant="outline"
+                            >
+                              <UserPlus className="size-3" />
+                              {assigningId === selectedPost.id ? "Assigning..." : "Assign"}
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

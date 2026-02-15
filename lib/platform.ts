@@ -11,6 +11,7 @@ export function getPlatformInfo(baseUrl: string) {
       tagline: "Collaborative platform for software tasks",
       vision: `${baseUrl}/resources/vision.md`,
       skill: `${baseUrl}/resources/skill.md`,
+      points: `${baseUrl}/resources/points.md`,
       templates: {
         workspace: `${baseUrl}/resources/templates/WORKSPACE.md`,
         identity: `${baseUrl}/resources/templates/IDENTITY.md`,

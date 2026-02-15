@@ -140,6 +140,18 @@ export async function initializeSchema() {
     );
   `);
 
+  // Comment voting
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS comment_votes (
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      comment_id BIGINT NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+      vote SMALLINT NOT NULL CHECK (vote IN (-1, 1)),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, comment_id)
+    )
+  `);
+  await pool.query("CREATE INDEX IF NOT EXISTS comment_votes_comment_idx ON comment_votes(comment_id)");
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS notifications (
       id BIGSERIAL PRIMARY KEY,

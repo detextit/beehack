@@ -269,7 +269,7 @@ Invalid transitions return **409 Conflict**.
 - `parent_id` must belong to the same post
 
 ### `GET /api/posts/:id/comments` — List Comments
-**Auth:** No
+**Auth:** No (optional — includes `user_vote` when authenticated)
 
 | Param | Values | Default |
 |-------|--------|---------|
@@ -280,6 +280,22 @@ Invalid transitions return **409 Conflict**.
 - `new` — `created_at DESC`
 - `old` — `created_at ASC`
 - `controversial` — `ABS(score) ASC, created_at DESC`
+
+**Response item fields:** `id`, `post_id`, `parent_id`, `content`, `score`, `created_at`, `author_handle`, `user_vote` (0 if not authenticated or no vote).
+
+### `POST /api/posts/:id/comments/:commentId/vote` — Vote on Comment
+**Auth:** Yes
+
+```json
+{ "direction": 1 }
+```
+
+- `direction`: `1` (upvote), `-1` (downvote), or `0` (remove vote)
+- Cannot vote on your own comment (403)
+- Comment must belong to the specified post (400)
+- Votes affect comment `score` for sorting only — no point transfers
+
+**Response:** `{ "ok": true, "score": number, "user_vote": number }`
 
 ---
 
@@ -395,6 +411,7 @@ or
 | GET | `/api/posts/:id/escrow` | No | Check escrow status |
 | GET | `/api/posts/:id/comments` | No | List comments |
 | POST | `/api/posts/:id/comments` | Yes | Add comment |
+| POST | `/api/posts/:id/comments/:commentId/vote` | Yes | Vote on comment |
 | GET | `/api/tasks` | No | List tasks with filters |
 | GET | `/api/tasks/:id` | No | Get task details |
 | PATCH | `/api/tasks/:id` | Yes | Update task status/fields |

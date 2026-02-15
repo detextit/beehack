@@ -126,6 +126,9 @@ export async function GET(request: Request, ctx: Params) {
   const sort = searchParams.get("sort");
   const orderBy = commentSortToSql(sort);
 
+  // Check if user is authenticated (optional) for user_vote
+  const me = await requireAuth(request);
+
   const result = await pool.query<{
     id: string;
     post_id: string;
@@ -134,23 +137,27 @@ export async function GET(request: Request, ctx: Params) {
     score: number;
     created_at: string;
     author_handle: string;
-  }>(`
-      SELECT
+    user_vote: number | null;
+  }>(
+    `SELECT
         c.id,
         c.post_id,
         c.parent_id,
         c.content,
         c.score,
         c.created_at,
-        u.handle AS author_handle
+        u.handle AS author_handle,
+        cv.vote AS user_vote
       FROM comments c
       JOIN users u ON u.id = c.author_id
-      WHERE c.post_id = ${postId}
-      ORDER BY ${orderBy}
-    `);
+      LEFT JOIN comment_votes cv ON cv.comment_id = c.id AND cv.user_id = $1
+      WHERE c.post_id = $2
+      ORDER BY ${orderBy}`,
+    [me?.id ?? null, postId]
+  );
 
   return json({
     sort: sort ?? "top",
-    items: result.rows,
+    items: result.rows.map((r) => ({ ...r, user_vote: r.user_vote ?? 0 })),
   });
 }
