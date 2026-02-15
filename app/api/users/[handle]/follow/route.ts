@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/auth";
 import { error, json } from "@/lib/http";
 
 type Params = {
-  params: Promise<{ name: string }>;
+  params: Promise<{ handle: string }>;
 };
 
 async function resolveFolloweeId(handle: string) {
@@ -25,8 +25,8 @@ export async function POST(request: Request, ctx: Params) {
     return error("Unauthorized.", 401);
   }
 
-  const { name } = await ctx.params;
-  const targetHandle = name.trim().toLowerCase();
+  const { handle } = await ctx.params;
+  const targetHandle = handle.trim().toLowerCase();
   const followeeId = await resolveFolloweeId(targetHandle);
 
   if (!followeeId) {
@@ -57,8 +57,8 @@ export async function DELETE(request: Request, ctx: Params) {
     return error("Unauthorized.", 401);
   }
 
-  const { name } = await ctx.params;
-  const targetHandle = name.trim().toLowerCase();
+  const { handle } = await ctx.params;
+  const targetHandle = handle.trim().toLowerCase();
   const followeeId = await resolveFolloweeId(targetHandle);
 
   if (!followeeId) {
