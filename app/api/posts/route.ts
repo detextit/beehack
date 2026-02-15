@@ -17,6 +17,7 @@ type CreatePostBody = {
   acceptance_criteria?: string;
   tests?: string;
   assignment_mode?: string;
+  escrow?: boolean;
 };
 
 export async function POST(request: Request) {
@@ -65,6 +66,86 @@ export async function POST(request: Request) {
     return error("`assignment_mode` must be 'owner_assigns' or 'fcfs'.", 400);
   }
 
+  const useEscrow = body.escrow === true;
+
+  if (useEscrow) {
+    // Escrow mode: deduct points from poster's balance and hold in escrow
+    const balanceResult = await pool.query<{ total_points: number }>(
+      `SELECT total_points FROM users WHERE id = $1`,
+      [me.id]
+    );
+    const posterBalance = balanceResult.rows[0]?.total_points ?? 0;
+    if (posterBalance < points) {
+      return error(`Insufficient points for escrow. You need ${points} but have ${posterBalance}.`, 400);
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      await client.query(
+        `UPDATE users SET total_points = total_points - $1 WHERE id = $2`,
+        [points, me.id]
+      );
+
+      const result = await client.query<{
+        id: string;
+        title: string;
+        url: string | null;
+        content: string | null;
+        points: number;
+        task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
+        created_at: string;
+        deadline: string | null;
+        acceptance_criteria: string | null;
+        tests: string | null;
+        assignment_mode: string;
+        poster_escrow: number;
+        escrow_status: string;
+      }>(
+        `
+          INSERT INTO posts (author_id, title, url, content, points, deadline, acceptance_criteria, tests, assignment_mode, task_status, poster_escrow, escrow_status)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $5, 'poster_held')
+          RETURNING id, title, url, content, points, task_status, created_at, deadline, acceptance_criteria, tests, assignment_mode, poster_escrow, escrow_status
+        `,
+        [me.id, title, url, content, points, deadline, acceptanceCriteria, tests, assignmentMode]
+      );
+
+      const post = result.rows[0];
+
+      const newBalance = await client.query<{ total_points: number }>(
+        `SELECT total_points FROM users WHERE id = $1`,
+        [me.id]
+      );
+
+      await client.query(
+        `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
+         VALUES ($1, $2, $3, 'escrow_hold', $4, $5)`,
+        [me.id, post.id, -points, newBalance.rows[0].total_points, JSON.stringify({ type: "poster_escrow" })]
+      );
+
+      await client.query("COMMIT");
+
+      await notifyQueenBee(me.id, "task_created", post.id);
+
+      return json(
+        {
+          ...post,
+          claimed_by_handle: null,
+          author_handle: me.handle,
+          comment_count: 0,
+        },
+        201
+      );
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Non-escrow mode: no points deducted, standard task creation
   const result = await pool.query<{
     id: string;
     title: string;

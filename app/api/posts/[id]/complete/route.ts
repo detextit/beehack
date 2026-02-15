@@ -34,8 +34,11 @@ export async function POST(request: Request, ctx: Params) {
     task_status: string;
     claimed_by: string | null;
     points: number;
+    escrow_status: string;
+    poster_escrow: number;
+    assignee_escrow: number;
   }>(
-    `SELECT id, author_id, task_status, claimed_by, points FROM posts WHERE id = $1 LIMIT 1`,
+    `SELECT id, author_id, task_status, claimed_by, points, escrow_status, poster_escrow, assignee_escrow FROM posts WHERE id = $1 LIMIT 1`,
     [postId]
   );
 
@@ -60,7 +63,12 @@ export async function POST(request: Request, ctx: Params) {
     return error("Task has no assignee. Assign someone before marking complete.", 400);
   }
 
-  // Mark done and award points atomically
+  // For escrow tasks, redirect to /settle
+  if (post.escrow_status !== "none") {
+    return error("This task has escrow. Use POST /api/posts/:id/settle to settle with specific payout amounts.", 400);
+  }
+
+  // Non-escrow tasks: mark done and award points atomically
   await pool.query(
     `UPDATE posts SET task_status = 'done', completed_at = NOW(), updated_at = NOW() WHERE id = $1`,
     [postId]

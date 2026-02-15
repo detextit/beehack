@@ -94,6 +94,29 @@ export async function initializeSchema() {
   // User bounty accumulation
   await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS total_points INTEGER NOT NULL DEFAULT 0");
 
+  // Escrow columns on posts
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS poster_escrow INTEGER NOT NULL DEFAULT 0");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS assignee_escrow INTEGER NOT NULL DEFAULT 0");
+  await pool.query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS escrow_status TEXT NOT NULL DEFAULT 'none'");
+  await pool.query("ALTER TABLE posts DROP CONSTRAINT IF EXISTS posts_escrow_status_check");
+  await pool.query("ALTER TABLE posts ADD CONSTRAINT posts_escrow_status_check CHECK (escrow_status IN ('none', 'poster_held', 'both_held', 'settled', 'refunded'))");
+
+  // Point transaction ledger
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS point_transactions (
+      id BIGSERIAL PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      post_id BIGINT REFERENCES posts(id) ON DELETE SET NULL,
+      amount INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      balance_after INTEGER NOT NULL,
+      meta JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await pool.query("CREATE INDEX IF NOT EXISTS point_tx_user_idx ON point_transactions(user_id, created_at DESC)");
+  await pool.query("CREATE INDEX IF NOT EXISTS point_tx_post_idx ON point_transactions(post_id) WHERE post_id IS NOT NULL");
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS comments (
       id BIGSERIAL PRIMARY KEY,
