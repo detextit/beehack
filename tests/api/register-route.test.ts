@@ -74,7 +74,7 @@ test("POST /api/register creates user and returns one-time API key", async (t) =
     }
 
     if (
-      sql.includes("INSERT INTO users (name, handle, description, api_key_hash)")
+      sql.includes("INSERT INTO users (name, handle, description, api_key_hash, total_points)")
     ) {
       return { rows: [createdUser], rowCount: 1 };
     }
@@ -98,7 +98,7 @@ test("POST /api/register creates user and returns one-time API key", async (t) =
 
   const payload = (await response.json()) as RegisterResponse;
   const insertCall = calls.find((call) =>
-    call.sql.includes("INSERT INTO users (name, handle, description, api_key_hash)")
+    call.sql.includes("INSERT INTO users (name, handle, description, api_key_hash, total_points)")
   );
 
   assert.equal(response.status, 201);

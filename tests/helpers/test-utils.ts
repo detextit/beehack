@@ -17,15 +17,16 @@ type QueryHandler = (call: QueryCall) => QueryResult | Promise<QueryResult>;
 
 type QueryablePool = {
   query: (...args: unknown[]) => Promise<{ rows: unknown[]; rowCount: number }>;
+  connect?: (...args: unknown[]) => Promise<unknown>;
 };
 
 function toQueryCall(args: unknown[]): QueryCall {
   const first = args[0] as
     | string
     | {
-        text?: unknown;
-        values?: unknown;
-      }
+      text?: unknown;
+      values?: unknown;
+    }
     | undefined;
 
   const sql =
@@ -72,7 +73,7 @@ export function installQueryMock(
 ) {
   const calls: QueryCall[] = [];
 
-  const tracker = mock.method(pool, "query", async (...args: unknown[]) => {
+  const mockQuery = async (...args: unknown[]) => {
     const call = toQueryCall(args);
     calls.push(call);
 
@@ -83,10 +84,24 @@ export function installQueryMock(
       rows,
       rowCount: result.rowCount ?? rows.length,
     };
-  });
+  };
+
+  const tracker = mock.method(pool, "query", mockQuery);
+
+  // Also mock pool.connect() to return a fake client that uses the same handler.
+  // This supports routes that use transactions (pool.connect() + client.query).
+  const connectTracker = mock.method(
+    pool as Required<QueryablePool>,
+    "connect",
+    async () => ({
+      query: mockQuery,
+      release: () => { },
+    })
+  );
 
   t.after(() => {
     tracker.mock.restore();
+    connectTracker.mock.restore();
   });
 
   return calls;

@@ -32,7 +32,7 @@ type ClaimRoute = {
 type FollowRoute = {
   POST: (
     request: Request,
-    ctx: { params: Promise<{ name: string }> }
+    ctx: { params: Promise<{ handle: string }> }
   ) => Promise<Response>;
 };
 
@@ -88,6 +88,16 @@ test("POST /api/posts creates a task post for an authenticated user", async (t) 
       )
     ) {
       return { rows: [createdPost], rowCount: 1 };
+    }
+
+    // Milestone: post count check
+    if (sql.includes("COUNT(*)") && sql.includes("FROM posts WHERE author_id")) {
+      return { rows: [{ count: "1" }], rowCount: 1 };
+    }
+
+    // Milestone: already-awarded check
+    if (sql.includes("FROM user_milestones")) {
+      return { rows: [{ "?column?": 1 }], rowCount: 1 };
     }
 
     return { rows: [], rowCount: 0 };
@@ -313,7 +323,7 @@ test("POST /api/users/:name/follow maps DB self-follow errors to 400", async (t)
   const pool = await loadPool(import.meta.url);
   const route = await loadDefaultModuleFrom<FollowRoute>(
     import.meta.url,
-    "../../app/api/users/[name]/follow/route.ts"
+    "../../app/api/users/[handle]/follow/route.ts"
   );
 
   installQueryMock(t, pool, ({ sql }) => {
@@ -339,7 +349,7 @@ test("POST /api/users/:name/follow maps DB self-follow errors to 400", async (t)
         authorization: "Bearer test_api_key",
       },
     }),
-    { params: Promise.resolve({ name: "route_tester" }) }
+    { params: Promise.resolve({ handle: "route_tester" }) }
   );
 
   const payload = (await response.json()) as { error: string };
