@@ -4,6 +4,8 @@ import { pool } from "@/lib/db";
 import { ensureDbReady } from "@/lib/bootstrap";
 import { requireAuth } from "@/lib/auth";
 import { error, json } from "@/lib/http";
+import { calculateEarlyBonus } from "@/lib/points-config";
+import { checkCompletionMilestones } from "@/lib/milestones";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -37,8 +39,9 @@ export async function POST(request: Request, ctx: Params) {
     escrow_status: string;
     poster_escrow: number;
     assignee_escrow: number;
+    deadline: string | null;
   }>(
-    `SELECT id, author_id, task_status, claimed_by, points, escrow_status, poster_escrow, assignee_escrow FROM posts WHERE id = $1 LIMIT 1`,
+    `SELECT id, author_id, task_status, claimed_by, points, escrow_status, poster_escrow, assignee_escrow, deadline FROM posts WHERE id = $1 LIMIT 1`,
     [postId]
   );
 
@@ -60,12 +63,18 @@ export async function POST(request: Request, ctx: Params) {
   }
 
   if (!post.claimed_by) {
-    return error("Task has no assignee. Assign someone before marking complete.", 400);
+    return error(
+      "Task has no assignee. Assign someone before marking complete.",
+      400
+    );
   }
 
   // For escrow tasks, only queenbee can settle
   if (post.escrow_status !== "none") {
-    return error("This task uses escrow. Only @queenbee can settle it via POST /api/posts/:id/settle.", 400);
+    return error(
+      "This task uses escrow. Only @queenbee can settle it via POST /api/posts/:id/settle.",
+      400
+    );
   }
 
   // Check poster has sufficient points to pay the bounty
@@ -75,11 +84,22 @@ export async function POST(request: Request, ctx: Params) {
   );
   const balance = posterBalance.rows[0]?.total_points ?? 0;
   if (balance < post.points) {
-    return error(`Poster has insufficient points. Needs ${post.points} but has ${balance}.`, 400);
+    return error(
+      `Poster has insufficient points. Needs ${post.points} but has ${balance}.`,
+      400
+    );
   }
+
+  // Check for early completion bonus
+  const now = new Date();
+  const isEarly = post.deadline !== null && now < new Date(post.deadline);
+  const earlyBonus = isEarly ? calculateEarlyBonus(post.points) : 0;
 
   // Transfer bounty: deduct from poster, credit to worker
   const client = await pool.connect();
+  let milestonesAwarded: string[] = [];
+  let milestoneBonus = 0;
+
   try {
     await client.query("BEGIN");
 
@@ -98,25 +118,76 @@ export async function POST(request: Request, ctx: Params) {
       [post.points, post.claimed_by]
     );
 
-    // Ledger entries
+    // Ledger entries for bounty
     const posterBal = await client.query<{ total_points: number }>(
-      `SELECT total_points FROM users WHERE id = $1`, [post.author_id]
+      `SELECT total_points FROM users WHERE id = $1`,
+      [post.author_id]
     );
     const workerBal = await client.query<{ total_points: number }>(
-      `SELECT total_points FROM users WHERE id = $1`, [post.claimed_by]
+      `SELECT total_points FROM users WHERE id = $1`,
+      [post.claimed_by]
     );
 
     await client.query(
       `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
        VALUES ($1, $2, $3, 'bounty_payout', $4, $5)`,
-      [post.author_id, postId, -post.points, posterBal.rows[0].total_points, JSON.stringify({ type: "bounty_transfer" })]
+      [
+        post.author_id,
+        postId,
+        -post.points,
+        posterBal.rows[0].total_points,
+        JSON.stringify({ type: "bounty_transfer" }),
+      ]
     );
 
     await client.query(
       `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
        VALUES ($1, $2, $3, 'bounty_payout', $4, $5)`,
-      [post.claimed_by, postId, post.points, workerBal.rows[0].total_points, JSON.stringify({ type: "bounty_transfer" })]
+      [
+        post.claimed_by,
+        postId,
+        post.points,
+        workerBal.rows[0].total_points,
+        JSON.stringify({ type: "bounty_transfer" }),
+      ]
     );
+
+    // Award early completion bonus if applicable
+    if (earlyBonus > 0) {
+      await client.query(
+        `UPDATE users SET total_points = total_points + $1 WHERE id = $2`,
+        [earlyBonus, post.claimed_by]
+      );
+
+      const bonusBal = await client.query<{ total_points: number }>(
+        `SELECT total_points FROM users WHERE id = $1`,
+        [post.claimed_by]
+      );
+
+      await client.query(
+        `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
+         VALUES ($1, $2, $3, 'early_completion_bonus', $4, $5)`,
+        [
+          post.claimed_by,
+          postId,
+          earlyBonus,
+          bonusBal.rows[0].total_points,
+          JSON.stringify({
+            deadline: post.deadline,
+            completed_at: now.toISOString(),
+          }),
+        ]
+      );
+    }
+
+    // Check and award completion milestones
+    const milestoneResult = await checkCompletionMilestones(
+      client,
+      post.claimed_by,
+      postId
+    );
+    milestonesAwarded = milestoneResult.milestonesAwarded;
+    milestoneBonus = milestoneResult.totalBonus;
 
     if (post.claimed_by !== me.id) {
       await client.query(
@@ -155,5 +226,8 @@ export async function POST(request: Request, ctx: Params) {
     ok: true,
     item: updated.rows[0],
     points_awarded: post.points,
+    early_bonus: earlyBonus,
+    milestones_awarded: milestonesAwarded,
+    milestone_bonus: milestoneBonus,
   });
 }

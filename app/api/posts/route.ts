@@ -6,6 +6,8 @@ import { requireAuth } from "@/lib/auth";
 import { error, json, parseJson } from "@/lib/http";
 import { postSortToSql } from "@/lib/posts";
 import { notifyQueenBee } from "@/lib/queenbee";
+import { canPerformTieredAction } from "@/lib/points-config";
+import { checkFirstPostMilestone } from "@/lib/milestones";
 
 type CreatePostBody = {
   title?: string;
@@ -75,6 +77,12 @@ export async function POST(request: Request) {
       [me.id]
     );
     const posterBalance = balanceResult.rows[0]?.total_points ?? 0;
+
+    // Tier-gated: creating escrow tasks requires Silver tier
+    if (!canPerformTieredAction(posterBalance, "create_escrow_task")) {
+      return error("Creating escrow tasks requires Silver tier (100+ points).", 403);
+    }
+
     if (posterBalance < points) {
       return error(`Insufficient points for escrow. You need ${points} but have ${posterBalance}.`, 400);
     }
@@ -124,6 +132,9 @@ export async function POST(request: Request) {
         [me.id, post.id, -points, newBalance.rows[0].total_points, JSON.stringify({ type: "poster_escrow" })]
       );
 
+      // Check for first_task_posted milestone
+      const milestoneResult = await checkFirstPostMilestone(client, me.id, Number(post.id));
+
       await client.query("COMMIT");
 
       await notifyQueenBee(me.id, "task_created", post.id);
@@ -134,6 +145,8 @@ export async function POST(request: Request) {
           claimed_by_handle: null,
           author_handle: me.handle,
           comment_count: 0,
+          milestone_awarded: milestoneResult.awarded ? "first_task_posted" : null,
+          milestone_bonus: milestoneResult.points,
         },
         201
       );
@@ -146,40 +159,64 @@ export async function POST(request: Request) {
   }
 
   // Non-escrow mode: no points deducted, standard task creation
-  const result = await pool.query<{
-    id: string;
-    title: string;
-    url: string | null;
-    content: string | null;
-    points: number;
-    task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
-    claimed_by_handle: string | null;
-    created_at: string;
-    author_handle: string;
-    deadline: string | null;
-    acceptance_criteria: string | null;
-    tests: string | null;
-    assignment_mode: string;
-  }>(
-    `
-      INSERT INTO posts (author_id, title, url, content, points, deadline, acceptance_criteria, tests, assignment_mode, task_status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open')
-      RETURNING id, title, url, content, points, task_status, created_at, deadline, acceptance_criteria, tests, assignment_mode
-    `,
-    [me.id, title, url, content, points, deadline, acceptanceCriteria, tests, assignmentMode]
-  );
+  const client = await pool.connect();
+  let milestoneAwarded: string | null = null;
+  let milestoneBonus = 0;
 
-  await notifyQueenBee(me.id, "task_created", result.rows[0].id);
+  try {
+    await client.query("BEGIN");
 
-  return json(
-    {
-      ...result.rows[0],
-      claimed_by_handle: null,
-      author_handle: me.handle,
-      comment_count: 0,
-    },
-    201
-  );
+    const result = await client.query<{
+      id: string;
+      title: string;
+      url: string | null;
+      content: string | null;
+      points: number;
+      task_status: "open" | "claimed" | "in_progress" | "in_review" | "done" | "cancelled";
+      created_at: string;
+      deadline: string | null;
+      acceptance_criteria: string | null;
+      tests: string | null;
+      assignment_mode: string;
+    }>(
+      `
+        INSERT INTO posts (author_id, title, url, content, points, deadline, acceptance_criteria, tests, assignment_mode, task_status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open')
+        RETURNING id, title, url, content, points, task_status, created_at, deadline, acceptance_criteria, tests, assignment_mode
+      `,
+      [me.id, title, url, content, points, deadline, acceptanceCriteria, tests, assignmentMode]
+    );
+
+    const post = result.rows[0];
+
+    // Check for first_task_posted milestone
+    const milestoneResult = await checkFirstPostMilestone(client, me.id, Number(post.id));
+    if (milestoneResult.awarded) {
+      milestoneAwarded = "first_task_posted";
+      milestoneBonus = milestoneResult.points;
+    }
+
+    await client.query("COMMIT");
+
+    await notifyQueenBee(me.id, "task_created", post.id);
+
+    return json(
+      {
+        ...post,
+        claimed_by_handle: null,
+        author_handle: me.handle,
+        comment_count: 0,
+        milestone_awarded: milestoneAwarded,
+        milestone_bonus: milestoneBonus,
+      },
+      201
+    );
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function GET(request: Request) {

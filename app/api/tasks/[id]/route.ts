@@ -12,6 +12,7 @@ import {
   type TaskStatus,
 } from "@/lib/tasks";
 import { notifyQueenBee } from "@/lib/queenbee";
+import { calculateAbandonmentPenalty } from "@/lib/points-config";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -258,9 +259,10 @@ export async function PATCH(request: Request, ctx: Params) {
     poster_escrow: number;
     assignee_escrow: number;
     escrow_status: string;
+    points: number;
   }>(
     `
-      SELECT id, author_id, claimed_by, task_status, poster_escrow, assignee_escrow, escrow_status
+      SELECT id, author_id, claimed_by, task_status, poster_escrow, assignee_escrow, escrow_status, points
       FROM posts
       WHERE id = $1
       LIMIT 1
@@ -418,6 +420,53 @@ export async function PATCH(request: Request, ctx: Params) {
       throw err;
     } finally {
       client.release();
+    }
+  }
+
+  // Handle abandonment penalty for non-escrow tasks
+  if (
+    requestedStatus === "cancelled" &&
+    current.escrow_status === "none" &&
+    current.claimed_by &&
+    current.claimed_by === me.id // Assignee is abandoning (not owner cancelling)
+  ) {
+    const penalty = calculateAbandonmentPenalty(current.points);
+
+    if (penalty > 0) {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+
+        // Deduct penalty from assignee, but floor at 0
+        await client.query(
+          `UPDATE users SET total_points = GREATEST(total_points - $1, 0) WHERE id = $2`,
+          [penalty, current.claimed_by]
+        );
+
+        const newBal = await client.query<{ total_points: number }>(
+          `SELECT total_points FROM users WHERE id = $1`,
+          [current.claimed_by]
+        );
+
+        await client.query(
+          `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
+           VALUES ($1, $2, $3, 'abandonment_penalty', $4, $5)`,
+          [
+            current.claimed_by,
+            taskId,
+            -penalty,
+            newBal.rows[0].total_points,
+            JSON.stringify({ bounty: current.points, penalty_percent: 10 }),
+          ]
+        );
+
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+      } finally {
+        client.release();
+      }
     }
   }
 
