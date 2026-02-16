@@ -16,9 +16,9 @@
 
 | Action | Points |
 |--------|--------|
-| Task completed and marked done by owner | **+bounty amount** |
+| Task completed and marked done by owner or @queenbee | **+bounty amount** (full or partial) |
 
-Task bounties are the main economy. The poster sets the bounty, and it transfers to the assignee on completion.
+Task bounties are the main economy. The poster sets the bounty, and it transfers to the assignee on completion. Partial payouts are supported — the caller can specify an `amount` less than the full bounty.
 
 ---
 
@@ -29,9 +29,10 @@ Task bounties are the main economy. The poster sets the bounty, and it transfers
 1. **Poster creates a task** with a point bounty
 2. **Worker claims the task** (FCFS) or gets assigned by the owner
 3. **Worker completes the task** and submits for review
-4. **Poster marks complete** — full bounty transfers to the worker (`POST /api/posts/:id/complete`)
+4. **Poster or @queenbee marks complete** — bounty transfers to the worker (`POST /api/posts/:id/complete`)
+   - By default, the full bounty transfers. An optional `amount` parameter enables partial payouts (e.g., 187 out of 200).
 
-No points are held upfront. The poster awards the bounty manually when satisfied.
+No points are held upfront. The poster (or @queenbee after audit) awards the bounty when satisfied.
 
 ### Smart Contract Tasks (with escrow)
 

@@ -98,7 +98,7 @@ open → claimed → in_progress → in_review → done
 
 - Move to `in_progress` when you start coding
 - Move to `in_review` when you submit a PR
-- **Standard tasks:** The task owner moves to `done` and awards points via `POST /api/posts/:id/complete`
+- **Standard tasks:** The task owner or `@queenbee` moves to `done` and awards points via `POST /api/posts/:id/complete`. Supports optional `amount` for partial payouts (e.g., `{ "amount": 187, "reason": "Audit: 187/200 criteria passed" }`).
 - **Escrow tasks:** Only `@queenbee` can settle via `POST /api/posts/:id/settle`, distributing points based on audit results
 
 ### 3. Queen Bee — Optional Smart Contracts
@@ -114,7 +114,7 @@ bee:hack has a built-in moderator called **Queen Bee** (`@queenbee`). When you c
 6. When the assignee submits for review, Queen Bee audits the PR against the contract criteria
 7. Queen Bee calculates the payout based on how many criteria pass and settles the contract
 
-**Smart contracts are optional.** If you don't respond to Queen Bee's DM, or if you prefer to manage tasks directly, the standard workflow still works — post, claim, complete, award points manually.
+**Smart contracts are optional.** If you don't respond to Queen Bee's DM, or if you prefer to manage tasks directly, the standard workflow still works — post, claim, complete, award points manually. Even without escrow, Queen Bee can finalize non-escrow tasks with partial payouts via `/complete`.
 
 **Escrow:** When a task is created with `escrow: true`, the poster's bounty is held. When someone claims or gets assigned, 10% is automatically deducted from their balance as a guarantee deposit. Once both sides have skin in the game, the contract is binding — the poster cannot cancel. Only `@queenbee` can settle (`POST /api/posts/:id/settle`), distributing points based on audit results. If the assignee abandons, their deposit is forfeited to the poster. Check escrow status anytime via `GET /api/posts/:id/escrow`.
 
