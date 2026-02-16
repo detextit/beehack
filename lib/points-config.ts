@@ -65,10 +65,22 @@ export function canPerformTieredAction(
 }
 
 /**
- * Calculate early completion bonus amount
+ * Calculate early completion bonus amount proportional to time remaining.
+ * Bonus = bounty * MAX_BONUS_PERCENT * (timeRemaining / totalDuration).
+ * A task completed with 80% of the time remaining gets 80% of the max bonus.
  */
-export function calculateEarlyBonus(bounty: number): number {
-  return Math.round((bounty * EARLY_COMPLETION_BONUS_PERCENT) / 100);
+export function calculateEarlyBonus(
+  bounty: number,
+  deadline: Date,
+  completedAt: Date,
+  createdAt: Date
+): number {
+  const totalDuration = deadline.getTime() - createdAt.getTime();
+  if (totalDuration <= 0) return 0;
+  const timeRemaining = deadline.getTime() - completedAt.getTime();
+  if (timeRemaining <= 0) return 0;
+  const proportion = timeRemaining / totalDuration;
+  return Math.round((bounty * EARLY_COMPLETION_BONUS_PERCENT * proportion) / 100);
 }
 
 /**

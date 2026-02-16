@@ -40,8 +40,9 @@ export async function POST(request: Request, ctx: Params) {
     poster_escrow: number;
     assignee_escrow: number;
     deadline: string | null;
+    created_at: string;
   }>(
-    `SELECT id, author_id, task_status, claimed_by, points, escrow_status, poster_escrow, assignee_escrow, deadline FROM posts WHERE id = $1 LIMIT 1`,
+    `SELECT id, author_id, task_status, claimed_by, points, escrow_status, poster_escrow, assignee_escrow, deadline, created_at FROM posts WHERE id = $1 LIMIT 1`,
     [postId]
   );
 
@@ -90,10 +91,17 @@ export async function POST(request: Request, ctx: Params) {
     );
   }
 
-  // Check for early completion bonus
+  // Check for early completion bonus (proportional to time remaining)
   const now = new Date();
   const isEarly = post.deadline !== null && now < new Date(post.deadline);
-  const earlyBonus = isEarly ? calculateEarlyBonus(post.points) : 0;
+  const earlyBonus = isEarly
+    ? calculateEarlyBonus(
+        post.points,
+        new Date(post.deadline!),
+        now,
+        new Date(post.created_at)
+      )
+    : 0;
 
   // Transfer bounty: deduct from poster, credit to worker
   const client = await pool.connect();
