@@ -30,6 +30,24 @@ export async function POST(request: Request, ctx: Params) {
     return error("Invalid post id.", 400);
   }
 
+  // Parse optional body params
+  let amount: number | null = null;
+  let reason: string | null = null;
+  try {
+    const body = await request.json();
+    if (body.amount !== undefined) {
+      amount = Number(body.amount);
+      if (!Number.isInteger(amount) || amount <= 0) {
+        return error("amount must be a positive integer.", 400);
+      }
+    }
+    if (body.reason !== undefined) {
+      reason = typeof body.reason === "string" ? body.reason : null;
+    }
+  } catch {
+    // No body or invalid JSON — fine, use defaults
+  }
+
   const current = await pool.query<{
     id: string;
     author_id: string;
@@ -51,8 +69,20 @@ export async function POST(request: Request, ctx: Params) {
     return error("Task not found.", 404);
   }
 
-  if (post.author_id !== me.id) {
-    return error("Only the task owner can mark it complete.", 403);
+  const isQueenBee = me.handle === "queenbee";
+  const isPoster = post.author_id === me.id;
+
+  if (!isPoster && !isQueenBee) {
+    return error("Only the task owner or @queenbee can mark it complete.", 403);
+  }
+
+  // Validate amount against bounty
+  const payout = amount ?? post.points;
+  if (payout > post.points) {
+    return error(
+      `amount (${payout}) cannot exceed task bounty (${post.points}).`,
+      400
+    );
   }
 
   if (post.task_status === "done") {
@@ -84,9 +114,9 @@ export async function POST(request: Request, ctx: Params) {
     [post.author_id]
   );
   const balance = posterBalance.rows[0]?.total_points ?? 0;
-  if (balance < post.points) {
+  if (balance < payout) {
     return error(
-      `Poster has insufficient points. Needs ${post.points} but has ${balance}.`,
+      `Poster has insufficient points. Needs ${payout} but has ${balance}.`,
       400
     );
   }
@@ -96,7 +126,7 @@ export async function POST(request: Request, ctx: Params) {
   const isEarly = post.deadline !== null && now < new Date(post.deadline);
   const earlyBonus = isEarly
     ? calculateEarlyBonus(
-        post.points,
+        payout,
         new Date(post.deadline!),
         now,
         new Date(post.created_at)
@@ -118,12 +148,12 @@ export async function POST(request: Request, ctx: Params) {
 
     await client.query(
       `UPDATE users SET total_points = total_points - $1 WHERE id = $2`,
-      [post.points, post.author_id]
+      [payout, post.author_id]
     );
 
     await client.query(
       `UPDATE users SET total_points = total_points + $1 WHERE id = $2`,
-      [post.points, post.claimed_by]
+      [payout, post.claimed_by]
     );
 
     // Ledger entries for bounty
@@ -136,15 +166,23 @@ export async function POST(request: Request, ctx: Params) {
       [post.claimed_by]
     );
 
+    const isPartial = payout < post.points;
+    const txMeta = {
+      type: "bounty_transfer",
+      ...(isPartial && { partial: true, full_bounty: post.points }),
+      ...(reason && { reason }),
+      ...(isQueenBee && { settled_by: "queenbee" }),
+    };
+
     await client.query(
       `INSERT INTO point_transactions (user_id, post_id, amount, reason, balance_after, meta)
        VALUES ($1, $2, $3, 'bounty_payout', $4, $5)`,
       [
         post.author_id,
         postId,
-        -post.points,
+        -payout,
         posterBal.rows[0].total_points,
-        JSON.stringify({ type: "bounty_transfer" }),
+        JSON.stringify(txMeta),
       ]
     );
 
@@ -154,9 +192,9 @@ export async function POST(request: Request, ctx: Params) {
       [
         post.claimed_by,
         postId,
-        post.points,
+        payout,
         workerBal.rows[0].total_points,
-        JSON.stringify({ type: "bounty_transfer" }),
+        JSON.stringify(txMeta),
       ]
     );
 
@@ -233,7 +271,10 @@ export async function POST(request: Request, ctx: Params) {
   return json({
     ok: true,
     item: updated.rows[0],
-    points_awarded: post.points,
+    points_awarded: payout,
+    total_bounty: post.points,
+    ...(payout < post.points && { partial: true }),
+    ...(reason && { reason }),
     early_bonus: earlyBonus,
     milestones_awarded: milestonesAwarded,
     milestone_bonus: milestoneBonus,
