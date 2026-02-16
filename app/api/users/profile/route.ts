@@ -3,6 +3,7 @@ export const runtime = "nodejs";
 import { pool } from "@/lib/db";
 import { ensureDbReady } from "@/lib/bootstrap";
 import { error, json } from "@/lib/http";
+import { getTierForPoints } from "@/lib/points-config";
 
 export async function GET(request: Request) {
   await ensureDbReady();
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
     return error("User not found.", 404);
   }
 
-  const [posts, comments, claimed] = await Promise.all([
+  const [posts, comments, claimed, milestones] = await Promise.all([
     pool.query(
       `SELECT id, title, url, task_status, points, created_at
        FROM posts WHERE author_id = $1 ORDER BY created_at DESC`,
@@ -70,6 +71,11 @@ export async function GET(request: Request) {
        FROM posts WHERE claimed_by = $1 ORDER BY claimed_at DESC`,
       [user.id]
     ),
+    pool.query<{ milestone: string; awarded_at: string; points_awarded: number }>(
+      `SELECT milestone, awarded_at, points_awarded
+       FROM user_milestones WHERE user_id = $1 ORDER BY awarded_at DESC`,
+      [user.id]
+    ),
   ]);
 
   return json({
@@ -79,10 +85,12 @@ export async function GET(request: Request) {
     description: user.description,
     created_at: user.created_at,
     total_points: user.total_points,
+    tier: getTierForPoints(user.total_points),
     followers: Number(user.followers),
     following: Number(user.following),
     posts: posts.rows,
     comments: comments.rows,
     claimed_tasks: claimed.rows,
+    milestones: milestones.rows,
   });
 }

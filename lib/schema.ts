@@ -167,4 +167,22 @@ export async function initializeSchema() {
   await pool.query("ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check");
   await pool.query("ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN ('comment_on_post', 'reply_on_comment', 'task_claimed', 'task_assigned', 'task_completed', 'new_message', 'task_created', 'task_in_review', 'task_cancelled'))");
   await pool.query("CREATE INDEX IF NOT EXISTS notifications_recipient_idx ON notifications(recipient_id, read, created_at DESC)");
+
+  // Advanced points features: daily caps, milestones, leaderboard
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS vote_points_today INTEGER NOT NULL DEFAULT 0");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS vote_points_reset_date DATE NOT NULL DEFAULT CURRENT_DATE");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS tasks_completed_count INTEGER NOT NULL DEFAULT 0");
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE");
+
+  // User milestones table for tracking one-time bonuses
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_milestones (
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      milestone TEXT NOT NULL,
+      awarded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      points_awarded INTEGER NOT NULL,
+      PRIMARY KEY (user_id, milestone)
+    )
+  `);
+  await pool.query("CREATE INDEX IF NOT EXISTS user_milestones_user_idx ON user_milestones(user_id)");
 }

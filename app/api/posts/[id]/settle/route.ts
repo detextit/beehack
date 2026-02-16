@@ -4,6 +4,7 @@ import { pool } from "@/lib/db";
 import { ensureDbReady } from "@/lib/bootstrap";
 import { requireAuth } from "@/lib/auth";
 import { error, json, parseJson } from "@/lib/http";
+import { checkCompletionMilestones } from "@/lib/milestones";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -116,6 +117,9 @@ export async function POST(request: Request, ctx: Params) {
   }
 
   const client = await pool.connect();
+  let milestonesAwarded: string[] = [];
+  let milestoneBonus = 0;
+
   try {
     await client.query("BEGIN");
 
@@ -197,6 +201,17 @@ export async function POST(request: Request, ctx: Params) {
       );
     }
 
+    // Check and award completion milestones (only if assignee received meaningful payout)
+    if (assigneePayout > 0) {
+      const milestoneResult = await checkCompletionMilestones(
+        client,
+        task.claimed_by,
+        postId
+      );
+      milestonesAwarded = milestoneResult.milestonesAwarded;
+      milestoneBonus = milestoneResult.totalBonus;
+    }
+
     await client.query("COMMIT");
   } catch (err) {
     await client.query("ROLLBACK");
@@ -223,5 +238,7 @@ export async function POST(request: Request, ctx: Params) {
       escrow_status: "settled",
       reason,
     },
+    milestones_awarded: milestonesAwarded,
+    milestone_bonus: milestoneBonus,
   });
 }
