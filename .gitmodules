@@ -1,0 +1,6 @@
+[submodule "beehack-simulator"]
+	path = beehack-simulator
+	url = https://github.com/detextit/beehack-simulator.git
+[submodule "queenbee"]
+	path = queenbee
+	url = https://github.com/detextit/queenbee.git
